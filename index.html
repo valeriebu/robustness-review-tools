@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Mental Health Tools — Robustness Review Suite</title>
+<style>
+  /* ── RESET & BASE ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0f3f7;
+    color: #222;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: #1F4E79;
+    color: white;
+    padding: 32px 40px 24px;
+  }
+  header h1 { font-size: 24px; margin-bottom: 6px; }
+  header p  { font-size: 14px; opacity: 0.8; max-width: 640px; line-height: 1.5; }
+
+  /* ── WORKFLOW STEPS ── */
+  .workflow {
+    background: #163d5e;
+    padding: 14px 40px;
+    display: flex;
+    gap: 0;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+  }
+  .step-num {
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 11px; flex-shrink: 0;
+  }
+  .step-arrow { color: rgba(255,255,255,0.35); margin: 0 12px; font-size: 16px; }
+
+  /* ── MAIN CONTENT ── */
+  main { padding: 32px 40px; max-width: 1100px; }
+
+  /* ── SECTION HEADERS ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin-bottom: 12px;
+    margin-top: 28px;
+  }
+
+  /* ── TOOL CARDS ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #dce3ec;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.15s, border-color 0.15s;
+    cursor: pointer;
+  }
+  .card:hover {
+    box-shadow: 0 4px 16px rgba(31,78,121,0.12);
+    border-color: #2E74B5;
+  }
+
+  .card-header { display: flex; align-items: flex-start; gap: 12px; }
+  .card-icon {
+    font-size: 24px;
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-title { font-size: 15px; font-weight: bold; color: #1F4E79; line-height: 1.3; }
+  .card-file  { font-size: 10px; color: #aaa; margin-top: 2px; font-family: monospace; }
+  .card-desc  { font-size: 12px; color: #555; line-height: 1.6; }
+
+  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+  }
+  .tag-blue   { background: #DEEAF1; color: #1F4E79; }
+  .tag-orange { background: #FDE9D9; color: #B8471A; }
+  .tag-green  { background: #E2EFDA; color: #375623; }
+  .tag-grey   { background: #F2F2F2; color: #555; }
+
+  .card-action {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 12px;
+    font-weight: bold;
+    color: #2E74B5;
+  }
+  .card-action::after { content: " →"; }
+
+  /* ── WORD DOCS SECTION ── */
+  .doc-list { display: flex; flex-direction: column; gap: 8px; }
+  .doc-row {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dce3ec;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .doc-icon { font-size: 20px; flex-shrink: 0; }
+  .doc-name { font-size: 13px; font-weight: bold; color: #1F4E79; }
+  .doc-desc { font-size: 12px; color: #777; }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 40px;
+    padding: 20px 40px;
+    background: white;
+    border-top: 1px solid #dce3ec;
+    font-size: 11px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <h1>AI Mental Health Tools — Robustness &amp; Transparency Review Suite</h1>
+  <p>A set of tools for conducting systematic reviews of AI-based clinical decision support
+     systems in mental health. Covers study mapping, population comparisons, subgroup
+     analysis, robustness scoring, and transparency scoring.</p>
+</header>
+
+<!-- ── WORKFLOW BAR ── -->
+<div class="workflow">
+  <div class="step">
+    <div class="step-num">1</div>
+    Map your tools &amp; studies
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step">
+    <div class="step-num">2</div>
+    Compare populations
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step">
+    <div class="step-num">3</div>
+    Score robustness &amp; transparency
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step">
+    <div class="step-num">4</div>
+    Visualise profiles
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step">
+    <div class="step-num">5</div>
+    Summarise per tool
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <div class="section-label">Interactive browser tools — click to open</div>
+  <div class="cards">
+
+    <!-- Tool 1: Review Overview -->
+    <a class="card" href="review-overview.html">
+      <div class="card-header">
+        <div class="card-icon" style="background:#EBF3FB">📋</div>
+        <div>
+          <div class="card-title">Review Overview</div>
+          <div class="card-file">review-overview.html</div>
+        </div>
+      </div>
+      <div class="card-desc">
+        Map all tools in your review and their associated studies (RCTs and precursors).
+        Enter study name, type, year, country, and sample size. Generates a live overview
+        table with per-tool summaries and grand totals. Export as CSV.
+      </div>
+      <div class="card-tags">
+        <span class="tag tag-blue">Step 1</span>
+        <span class="tag tag-grey">Study mapping</span>
+        <span class="tag tag-grey">CSV export</span>
+      </div>
+      <div class="card-action">Open tool</div>
+    </a>
+
+    <!-- Tool 2: Radar Chart -->
+    <a class="card" href="radar-chart.html">
+      <div class="card-header">
+        <div class="card-icon" style="background:#FDE9D9">🕸️</div>
+        <div>
+          <div class="card-title">Robustness &amp; Transparency Radar</div>
+          <div class="card-file">radar-chart.html</div>
+        </div>
+      </div>
+      <div class="card-desc">
+        Enter dimension % scores (from the scoring sheet) for each study or tool.
+        Generates two side-by-side radar charts — one for robustness, one for transparency.
+        Compare multiple studies or tools. Export charts as PNG.
+      </div>
+      <div class="card-tags">
+        <span class="tag tag-blue">Step 4</span>
+        <span class="tag tag-orange">Robustness</span>
+        <span class="tag tag-orange">Transparency</span>
+        <span class="tag tag-grey">PNG export</span>
+      </div>
+      <div class="card-action">Open tool</div>
+    </a>
+
+  </div>
+
+  <!-- Word documents -->
+  <div class="section-label">Word documents — download, print, and fill in per study</div>
+  <div class="doc-list">
+
+    <div class="doc-row">
+      <div class="doc-icon">📄</div>
+      <div>
+        <div class="doc-name">Extraction Codebook (Empty)</div>
+        <div class="doc-desc">
+          The full extraction codebook for each study — all 9 sections.
+          Robustness-relevant questions highlighted in amber.
+          <strong>File:</strong> AI_Extraction_Codebook_Robustness_Marked.docx
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-row">
+      <div class="doc-icon">📄</div>
+      <div>
+        <div class="doc-name">Robustness &amp; Transparency Scoring Sheet</div>
+        <div class="doc-desc">
+          Score each study on 7 robustness dimensions (R1–R7) and 7 transparency
+          dimensions (T1–T7). Yes/no per question, tallied into % scores per dimension.
+          Transfer scores to the radar chart tool.
+          <strong>File:</strong> Robustness_Transparency_Scoring_Sheet.docx
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-row">
+      <div class="doc-icon">📄</div>
+      <div>
+        <div class="doc-name">Population Comparison — Step 1</div>
+        <div class="doc-desc">
+          Side-by-side comparison of intended use population, training data population,
+          and RCT study population. Flags mismatches between the three.
+          <strong>File:</strong> Robustness_Step1_Population_Comparison.docx
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-row">
+      <div class="doc-icon">📄</div>
+      <div>
+        <div class="doc-name">Results Across Subgroups — Step 2</div>
+        <div class="doc-desc">
+          Records clinical outcome results and AI performance metrics broken down
+          by subgroup (sex, age, race, clinical group, setting, etc.).
+          Flags where subgroup analyses were not reported.
+          <strong>File:</strong> Robustness_Step2_Results_Across_Subgroups.docx
+        </div>
+      </div>
+    </div>
+
+    <div class="doc-row">
+      <div class="doc-icon">📄</div>
+      <div>
+        <div class="doc-name">Tool-Level Overview Sheet</div>
+        <div class="doc-desc">
+          One sheet per tool — aggregates findings across the RCT and all precursor studies.
+          Rows = dimensions, columns = each study + tool-level conclusion.
+          Scores plus space to write what was found per cell.
+          <strong>File:</strong> Tool_Overview_Sheet.docx
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- How to use -->
+  <div class="section-label">How to use these tools together</div>
+  <div style="background:white;border-radius:8px;border:1px solid #dce3ec;padding:20px;font-size:13px;line-height:1.8;color:#444;">
+    <strong style="color:#1F4E79">1. Map your review</strong> — Open the <em>Review Overview</em> tool.
+    Add each AI tool and its associated studies. This gives you a bird's-eye view of what you're working with.<br><br>
+    <strong style="color:#1F4E79">2. Extract each study</strong> — Use the <em>Extraction Codebook</em> (Word) per study.
+    Amber-highlighted questions are robustness-relevant.<br><br>
+    <strong style="color:#1F4E79">3. Compare populations</strong> — Fill in the <em>Population Comparison</em> sheet (Step 1)
+    to check whether the intended use population, training data, and RCT sample align.<br><br>
+    <strong style="color:#1F4E79">4. Check subgroup results</strong> — Use the <em>Subgroup Results</em> sheet (Step 2)
+    to record whether clinical and AI performance results held up across demographic groups.<br><br>
+    <strong style="color:#1F4E79">5. Score each study</strong> — Complete the <em>Scoring Sheet</em> (Word) for each study.
+    Tally % scores per dimension at the bottom.<br><br>
+    <strong style="color:#1F4E79">6. Visualise</strong> — Enter scores into the <em>Radar Chart</em> tool to generate
+    robustness and transparency profiles. Export as PNG for your paper.<br><br>
+    <strong style="color:#1F4E79">7. Summarise per tool</strong> — Complete the <em>Tool-Level Overview Sheet</em> (Word)
+    to aggregate evidence across the RCT and precursors into a single tool-level judgement.
+  </div>
+
+</main>
+
+<footer>
+  All tools run entirely in your browser — no data is sent to any server.
+  To update a tool, replace the corresponding HTML file and refresh the page.
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robustness Profile — Radar Chart</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f5f7fa; color: #222; padding: 24px; }
+  h1 { color: #1F4E79; font-size: 22px; margin-bottom: 4px; }
+  h2 { color: #2E74B5; font-size: 15px; font-weight: normal; margin-bottom: 24px; }
+
+  .layout { display: flex; gap: 28px; align-items: flex-start; }
+  .left-panel { width: 420px; flex-shrink: 0; }
+  .right-panel { flex: 1; min-width: 0; }
+
+  .study-entry { background: white; border-radius: 8px; padding: 16px; margin-bottom: 14px;
+    border: 1px solid #dce3ec; position: relative; }
+  .study-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .study-name-input { flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 5px 8px;
+    font-size: 13px; font-family: Arial; }
+  .color-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; border: 1px solid #aaa; }
+  .remove-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px;
+    line-height: 1; padding: 0 2px; }
+  .remove-btn:hover { color: #c00; }
+
+  .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dim-row { display: flex; flex-direction: column; gap: 3px; }
+  .dim-label { font-size: 11px; color: #555; font-weight: bold; }
+  .dim-label span { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 4px; vertical-align: middle; }
+  .score-input { width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px;
+    font-size: 13px; font-family: Arial; }
+  .score-input:focus { outline: none; border-color: #2E74B5; }
+  .score-hint { font-size: 10px; color: #999; }
+
+  .add-btn { width: 100%; padding: 9px; background: #1F4E79; color: white; border: none;
+    border-radius: 6px; font-size: 13px; cursor: pointer; margin-bottom: 10px; font-family: Arial; }
+  .add-btn:hover { background: #2E74B5; }
+
+  .chart-wrap { background: white; border-radius: 8px; padding: 20px;
+    border: 1px solid #dce3ec; position: relative; }
+  canvas { max-width: 100%; }
+
+  .legend-box { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+  .export-btn { margin-top: 12px; padding: 8px 18px; background: #2E74B5; color: white;
+    border: none; border-radius: 5px; font-size: 13px; cursor: pointer; font-family: Arial; }
+  .export-btn:hover { background: #1F4E79; }
+
+  .note { font-size: 11px; color: #888; margin-top: 8px; font-style: italic; }
+
+  .dim-colors { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+  .dim-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Robustness Profile Tool</h1>
+<h2>Enter dimension % scores from each study's scoring sheet to generate and compare radar charts</h2>
+
+<div class="layout">
+  <div class="left-panel">
+    <div id="studies-container"></div>
+    <button class="add-btn" onclick="addStudy()">+ Add Study</button>
+    <p class="note">Dimension 8 (Chatbot) is optional — leave blank if not applicable.</p>
+  </div>
+  <div class="right-panel">
+    <div class="chart-wrap">
+      <canvas id="radarChart" width="500" height="500"></canvas>
+      <div class="legend-box" id="legend"></div>
+      <button class="export-btn" onclick="exportChart()">Export chart as PNG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DIMS = [
+  { id: "d1", label: "Training Data Quality",           short: "Data Quality",      color: "#4472C4", bg: "#DEEAF1", n: 6  },
+  { id: "d2", label: "Training Data Representativeness", short: "Data Represent.",   color: "#70AD47", bg: "#E2EFDA", n: 5  },
+  { id: "d3", label: "Model Development Rigour",         short: "Dev. Rigour",       color: "#FFC000", bg: "#FFF2CC", n: 4  },
+  { id: "d4", label: "Validation Rigour",                short: "Validation",        color: "#FF4B00", bg: "#FCE4D6", n: 9  },
+  { id: "d5", label: "Subgroup & Fairness Testing",      short: "Fairness",          color: "#CC0066", bg: "#EAD1DC", n: 8  },
+  { id: "d6", label: "Operational Robustness",           short: "Operational",       color: "#7030A0", bg: "#D9D2E9", n: 9  },
+  { id: "d7", label: "Stress-Testing & Sensitivity",     short: "Stress-Testing",    color: "#C00000", bg: "#F4CCCC", n: 4  },
+  { id: "d8", label: "Chatbot / LLM (conditional)",      short: "Chatbot",           color: "#00B0A0", bg: "#D9EAD3", n: 3  },
+];
+
+const STUDY_COLORS = [
+  "rgba(31,78,121,0.7)", "rgba(112,173,71,0.7)", "rgba(255,192,0,0.7)",
+  "rgba(255,75,0,0.7)",  "rgba(204,0,102,0.7)",  "rgba(112,48,160,0.7)",
+  "rgba(0,176,160,0.7)", "rgba(192,0,0,0.7)"
+];
+
+let studies = [];
+let chart = null;
+let studyCounter = 0;
+
+function addStudy() {
+  const idx = studies.length;
+  const id = "study_" + (++studyCounter);
+  const color = STUDY_COLORS[idx % STUDY_COLORS.length];
+  studies.push({ id, name: "Study " + studyCounter, color, scores: {} });
+  renderStudies();
+  updateChart();
+}
+
+function removeStudy(id) {
+  studies = studies.filter(s => s.id !== id);
+  renderStudies();
+  updateChart();
+}
+
+function renderStudies() {
+  const container = document.getElementById("studies-container");
+  container.innerHTML = "";
+  studies.forEach((study, idx) => {
+    const div = document.createElement("div");
+    div.className = "study-entry";
+    div.innerHTML = `
+      <div class="study-header">
+        <div class="color-dot" style="background:${study.color}"></div>
+        <input class="study-name-input" value="${study.name}"
+          oninput="studies[${idx}].name=this.value; updateChart()" placeholder="Study name" />
+        <button class="remove-btn" onclick="removeStudy('${study.id}')" title="Remove">×</button>
+      </div>
+      <div class="dim-grid">
+        ${DIMS.map(d => `
+          <div class="dim-row">
+            <label class="dim-label">
+              <span style="background:${d.color}"></span>${d.short} (/${d.n})
+            </label>
+            <input class="score-input" type="number" min="0" max="100" step="1"
+              placeholder="0–100 %"
+              value="${study.scores[d.id] !== undefined ? study.scores[d.id] : ''}"
+              oninput="studies[${idx}].scores['${d.id}']=this.value===''?null:parseFloat(this.value); updateChart()" />
+          </div>
+        `).join("")}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function getDatasets() {
+  return studies.map((study, i) => {
+    const color = study.color;
+    const borderColor = color.replace("0.7", "1");
+    return {
+      label: study.name || "Study " + (i+1),
+      data: DIMS.map(d => study.scores[d.id] != null ? study.scores[d.id] : null),
+      backgroundColor: color.replace("0.7", "0.15"),
+      borderColor: borderColor,
+      borderWidth: 2.5,
+      pointBackgroundColor: borderColor,
+      pointRadius: 4,
+      spanGaps: false,
+    };
+  });
+}
+
+function updateChart() {
+  const labels = DIMS.map(d => d.short);
+  const datasets = getDatasets();
+
+  if (!chart) {
+    const ctx = document.getElementById("radarChart").getContext("2d");
+    chart = new Chart(ctx, {
+      type: "radar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        scales: {
+          r: {
+            min: 0, max: 100,
+            ticks: { stepSize: 20, font: { size: 11 }, color: "#666" },
+            pointLabels: { font: { size: 12, weight: "bold" }, color: "#1F4E79" },
+            grid: { color: "rgba(0,0,0,0.1)" },
+            angleLines: { color: "rgba(0,0,0,0.15)" },
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw + "%" : "N/A"}`
+            }
+          }
+        }
+      }
+    });
+  } else {
+    chart.data.datasets = datasets;
+    chart.update();
+  }
+
+  // Legend
+  const legend = document.getElementById("legend");
+  legend.innerHTML = studies.map(s => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${s.color.replace('0.7','1')}"></div>
+      <span>${s.name || "Unnamed"}</span>
+    </div>
+  `).join("");
+}
+
+function exportChart() {
+  const canvas = document.getElementById("radarChart");
+  const link = document.createElement("a");
+  link.download = "robustness_profile.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+// Start with two example studies
+addStudy();
+addStudy();
+</script>
+</body>
+</html>

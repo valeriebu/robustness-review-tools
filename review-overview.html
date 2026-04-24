@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Overview</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; padding: 24px; font-size: 13px; }
+
+h1 { color: #1F4E79; font-size: 18px; margin-bottom: 4px; }
+.subtitle { color: #777; font-size: 12px; margin-bottom: 20px; }
+
+/* ── LAYOUT ── */
+.layout { display: flex; gap: 20px; align-items: flex-start; }
+.left  { width: 360px; flex-shrink: 0; }
+.right { flex: 1; min-width: 0; overflow-x: auto; }
+
+/* ── INPUT CARDS ── */
+.tool-card { background: white; border-radius: 8px; border: 1px solid #dce3ec;
+  margin-bottom: 14px; overflow: hidden; }
+.tool-card-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid #eee; background: #f7f9fc; }
+.tool-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+.tool-name-inp { flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px;
+  font-size: 13px; font-weight: bold; font-family: Arial; color: #1F4E79; }
+.remove-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 17px; padding: 0 2px; }
+.remove-btn:hover { color: #c00; }
+
+.studies-list { padding: 8px 14px; }
+
+.study-row { display: grid; grid-template-columns: 90px 1fr 60px 80px 100px 28px;
+  gap: 5px; align-items: center; margin-bottom: 6px; }
+.study-type-sel { border: 1px solid #ddd; border-radius: 4px; padding: 3px 5px;
+  font-size: 11px; font-family: Arial; background: white; }
+.study-inp { border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px;
+  font-size: 11px; font-family: Arial; width: 100%; }
+.study-inp::placeholder { color: #bbb; }
+.remove-study-btn { background: none; border: none; color: #ccc; cursor: pointer;
+  font-size: 15px; padding: 0; }
+.remove-study-btn:hover { color: #c00; }
+
+.study-row-header { display: grid;
+  grid-template-columns: 90px 1fr 60px 80px 100px 28px;
+  gap: 5px; margin-bottom: 4px; }
+.col-label { font-size: 10px; color: #999; font-weight: bold; text-transform: uppercase; }
+
+.add-study-btns { display: flex; gap: 5px; padding: 6px 14px 10px; }
+.add-btn-sm { padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px;
+  font-weight: bold; cursor: pointer; font-family: Arial; }
+.btn-rct    { background: #DEEAF1; color: #1F4E79; }
+.btn-prec   { background: #FFF2CC; color: #7B6000; }
+.add-btn-sm:hover { opacity: 0.8; }
+
+/* ── MAIN ADD BUTTON ── */
+.add-tool-btn { width: 100%; padding: 9px; background: #1F4E79; color: white;
+  border: none; border-radius: 6px; font-size: 13px; font-weight: bold;
+  cursor: pointer; font-family: Arial; margin-bottom: 6px; }
+.add-tool-btn:hover { background: #2E74B5; }
+
+/* ── SUMMARY STATS ── */
+.stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stat-chip { background: white; border: 1px solid #dce3ec; border-radius: 20px;
+  padding: 5px 14px; font-size: 12px; }
+.stat-chip span { font-weight: bold; color: #1F4E79; }
+
+/* ── OVERVIEW TABLE ── */
+.table-wrap { background: white; border-radius: 8px; border: 1px solid #dce3ec;
+  padding: 16px; }
+.table-title { font-size: 14px; font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
+.table-sub { font-size: 11px; color: #999; margin-bottom: 12px; font-style: italic; }
+
+table.overview { border-collapse: collapse; min-width: 100%; font-size: 12px; }
+table.overview th { padding: 7px 10px; text-align: left; font-size: 11px; white-space: nowrap; }
+table.overview td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+table.overview tr:last-child td { border-bottom: none; }
+
+.th-tool  { background: #1F4E79; color: white; }
+.th-study { background: #2E74B5; color: white; }
+.th-info  { background: #5B9BD5; color: white; }
+.th-totals { background: #EBF3FB; color: #1F4E79; font-weight: bold; }
+
+/* Tool name cell spanning all its studies */
+.tool-name-cell { font-weight: bold; color: #1F4E79; font-size: 13px; vertical-align: top; }
+.tool-dot-inline { display: inline-block; width: 10px; height: 10px;
+  border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+/* Study type badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: bold; white-space: nowrap; }
+.badge-rct        { background: #DEEAF1; color: #1F4E79; }
+.badge-feasibility{ background: #FFF2CC; color: #7B6000; }
+.badge-usability  { background: #FCE4D6; color: #9C2700; }
+.badge-validation { background: #EAD1DC; color: #7B003F; }
+.badge-acceptability { background: #D9EAD3; color: #1A5200; }
+.badge-other      { background: #E8E8E8; color: #444; }
+
+/* Tool summary row */
+.tool-summary-row td { background: #F7FBFF; font-size: 11px; color: #555; }
+.tool-summary-row td:first-child { font-weight: bold; color: #1F4E79; }
+
+/* Total row */
+.total-row td { background: #EBF3FB; font-weight: bold; color: #1F4E79; font-size: 12px; }
+
+/* Export */
+.export-btn { margin-top: 12px; padding: 7px 16px; background: #2E74B5; color: white;
+  border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-family: Arial; }
+.export-btn:hover { background: #1F4E79; }
+
+/* Empty state */
+.empty-state { text-align: center; color: #aaa; padding: 40px 20px;
+  font-style: italic; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>Systematic Review — Study Overview</h1>
+<p class="subtitle">Enter tools and their associated studies. The overview table builds automatically.</p>
+
+<div class="layout">
+  <!-- INPUT -->
+  <div class="left">
+    <div id="tools-container"></div>
+    <button class="add-tool-btn" onclick="addTool()">+ Add Tool</button>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="right">
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="table-wrap">
+      <div class="table-title">Review Overview</div>
+      <div class="table-sub">One row per study, grouped by tool. Tool summary rows show totals per tool.</div>
+      <div id="table-container">
+        <div class="empty-state">Add a tool on the left to get started.</div>
+      </div>
+      <button class="export-btn" onclick="exportCSV()">Export as CSV</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOOL_COLORS = [
+  "#1F4E79","#C00000","#375623","#7B3F00","#4B0082",
+  "#00695C","#BF360C","#1A237E","#4A148C","#1B5E20"
+];
+
+const STUDY_TYPES = [
+  "RCT","Feasibility","Usability","Acceptability","Validation (internal)",
+  "Validation (external)","Other"
+];
+
+const TYPE_BADGE_MAP = {
+  "RCT": "badge-rct",
+  "Feasibility": "badge-feasibility",
+  "Usability": "badge-usability",
+  "Acceptability": "badge-acceptability",
+  "Validation (internal)": "badge-validation",
+  "Validation (external)": "badge-validation",
+  "Other": "badge-other"
+};
+
+let tools = [];
+let toolCounter = 0;
+let studyCounter = 0;
+
+function addTool() {
+  const id = "t" + (++toolCounter);
+  const color = TOOL_COLORS[(toolCounter - 1) % TOOL_COLORS.length];
+  tools.push({ id, name: "Tool " + toolCounter, color, studies: [] });
+  addStudy(tools.length - 1, "RCT");
+  render();
+}
+
+function removeTool(toolId) {
+  tools = tools.filter(t => t.id !== toolId);
+  render();
+}
+
+function addStudy(toolIdx, type) {
+  const id = "s" + (++studyCounter);
+  tools[toolIdx].studies.push({
+    id, type,
+    name: "", year: "", country: "", n: "", notes: ""
+  });
+  render();
+}
+
+function removeStudy(toolIdx, studyId) {
+  tools[toolIdx].studies = tools[toolIdx].studies.filter(s => s.id !== studyId);
+  render();
+}
+
+function setField(toolIdx, studyId, field, val) {
+  const s = tools[toolIdx].studies.find(s => s.id === studyId);
+  if (s) s[field] = val;
+  renderTable(); // only re-render table, not inputs
+}
+
+function setToolName(toolIdx, val) {
+  tools[toolIdx].name = val;
+  renderTable();
+}
+
+function setStudyType(toolIdx, studyId, val) {
+  const s = tools[toolIdx].studies.find(s => s.id === studyId);
+  if (s) s.type = val;
+  render();
+}
+
+// ── RENDER INPUT PANEL ──
+function renderInputs() {
+  const container = document.getElementById("tools-container");
+  container.innerHTML = "";
+
+  tools.forEach((tool, tidx) => {
+    const card = document.createElement("div");
+    card.className = "tool-card";
+
+    const studyRowsHtml = tool.studies.map((study, sidx) => `
+      <div class="study-row">
+        <select class="study-type-sel" onchange="setStudyType(${tidx},'${study.id}',this.value)">
+          ${STUDY_TYPES.map(t => `<option value="${t}" ${study.type===t?"selected":""}>${t}</option>`).join("")}
+        </select>
+        <input class="study-inp" placeholder="Study / first author, year"
+          value="${study.name}"
+          oninput="setField(${tidx},'${study.id}','name',this.value)" />
+        <input class="study-inp" placeholder="Year"
+          value="${study.year}"
+          oninput="setField(${tidx},'${study.id}','year',this.value)" />
+        <input class="study-inp" placeholder="Country"
+          value="${study.country}"
+          oninput="setField(${tidx},'${study.id}','country',this.value)" />
+        <input class="study-inp" placeholder="N (sample size)"
+          value="${study.n}"
+          oninput="setField(${tidx},'${study.id}','n',this.value)" />
+        <button class="remove-study-btn" onclick="removeStudy(${tidx},'${study.id}')" title="Remove">×</button>
+      </div>`).join("");
+
+    card.innerHTML = `
+      <div class="tool-card-header">
+        <div class="tool-dot" style="background:${tool.color}"></div>
+        <input class="tool-name-inp" value="${tool.name}"
+          oninput="tools[${tidx}].name=this.value;setToolName(${tidx},this.value)"
+          placeholder="Tool name" />
+        <button class="remove-btn" onclick="removeTool('${tool.id}')" title="Remove tool">×</button>
+      </div>
+      <div class="studies-list">
+        <div class="study-row-header">
+          <div class="col-label">Type</div>
+          <div class="col-label">Study name</div>
+          <div class="col-label">Year</div>
+          <div class="col-label">Country</div>
+          <div class="col-label">N</div>
+          <div></div>
+        </div>
+        ${studyRowsHtml}
+      </div>
+      <div class="add-study-btns">
+        <button class="add-btn-sm btn-rct" onclick="addStudy(${tidx},'RCT')">+ RCT</button>
+        <button class="add-btn-sm btn-prec" onclick="addStudy(${tidx},'Feasibility')">+ Feasibility</button>
+        <button class="add-btn-sm btn-prec" onclick="addStudy(${tidx},'Usability')">+ Usability</button>
+        <button class="add-btn-sm btn-prec" onclick="addStudy(${tidx},'Validation (external)')">+ Validation</button>
+        <button class="add-btn-sm btn-prec" onclick="addStudy(${tidx},'Other')">+ Other</button>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+// ── RENDER TABLE ──
+function renderTable() {
+  // Stats bar
+  const totalTools   = tools.length;
+  const totalStudies = tools.reduce((a, t) => a + t.studies.length, 0);
+  const totalRCTs    = tools.reduce((a, t) => a + t.studies.filter(s => s.type === "RCT").length, 0);
+  const totalPrecs   = totalStudies - totalRCTs;
+  const typeCounts   = {};
+  tools.forEach(t => t.studies.forEach(s => { typeCounts[s.type] = (typeCounts[s.type]||0)+1; }));
+
+  document.getElementById("stats-bar").innerHTML = [
+    `<div class="stat-chip">Tools: <span>${totalTools}</span></div>`,
+    `<div class="stat-chip">Total studies: <span>${totalStudies}</span></div>`,
+    `<div class="stat-chip">RCTs: <span>${totalRCTs}</span></div>`,
+    `<div class="stat-chip">Precursors: <span>${totalPrecs}</span></div>`,
+    ...Object.entries(typeCounts).filter(([k]) => k !== "RCT").map(([k,v]) =>
+      `<div class="stat-chip">${k}: <span>${v}</span></div>`)
+  ].join("");
+
+  if (tools.length === 0) {
+    document.getElementById("table-container").innerHTML =
+      '<div class="empty-state">Add a tool on the left to get started.</div>';
+    return;
+  }
+
+  // Build table
+  let html = `
+    <table class="overview">
+      <thead>
+        <tr>
+          <th class="th-tool" rowspan="2">Tool</th>
+          <th class="th-study" rowspan="2">Study / Reference</th>
+          <th class="th-study" rowspan="2">Study Type</th>
+          <th class="th-info" rowspan="2">Year</th>
+          <th class="th-info" rowspan="2">Country</th>
+          <th class="th-info" rowspan="2">Sample Size (N)</th>
+          <th class="th-info" rowspan="2">Notes</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  let grandTotalN = 0;
+
+  tools.forEach(tool => {
+    if (tool.studies.length === 0) return;
+
+    const rcts    = tool.studies.filter(s => s.type === "RCT");
+    const precs   = tool.studies.filter(s => s.type !== "RCT");
+    const typeList = [...new Set(tool.studies.map(s => s.type))].join(", ");
+    const toolN   = tool.studies.reduce((a, s) => {
+      const n = parseInt(s.n);
+      return a + (isNaN(n) ? 0 : n);
+    }, 0);
+    if (toolN) grandTotalN += toolN;
+
+    // Study rows
+    tool.studies.forEach((study, i) => {
+      const isFirst = i === 0;
+      const badgeClass = TYPE_BADGE_MAP[study.type] || "badge-other";
+      html += `<tr>
+        ${isFirst ? `<td class="tool-name-cell" rowspan="${tool.studies.length + 1}">
+          <span class="tool-dot-inline" style="background:${tool.color}"></span>${tool.name}
+        </td>` : ""}
+        <td>${study.name || "<span style='color:#bbb;font-style:italic'>—</span>"}</td>
+        <td><span class="badge ${badgeClass}">${study.type}</span></td>
+        <td>${study.year || "—"}</td>
+        <td>${study.country || "—"}</td>
+        <td>${study.n || "—"}</td>
+        <td style="color:#666;font-size:11px">${study.notes || ""}</td>
+      </tr>`;
+    });
+
+    // Tool summary row
+    html += `<tr class="tool-summary-row">
+      <td colspan="1" style="font-style:italic">
+        ${tool.studies.length} ${tool.studies.length === 1 ? "study" : "studies"} total
+        &nbsp;·&nbsp; ${rcts.length} RCT · ${precs.length} precursor${precs.length !== 1 ? "s" : ""}
+        &nbsp;·&nbsp; types: ${typeList}
+      </td>
+      <td></td><td></td>
+      <td style="font-weight:bold">${toolN > 0 ? "N = " + toolN.toLocaleString() + " (sum)" : "—"}</td>
+      <td></td>
+    </tr>`;
+  });
+
+  // Grand total row
+  html += `<tr class="total-row">
+    <td>TOTAL</td>
+    <td>${tools.reduce((a,t)=>a+t.studies.length,0)} studies across ${tools.length} tools</td>
+    <td></td><td></td><td></td>
+    <td>${grandTotalN > 0 ? "N = " + grandTotalN.toLocaleString() : "—"}</td>
+    <td></td>
+  </tr>`;
+
+  html += `</tbody></table>`;
+  document.getElementById("table-container").innerHTML = html;
+}
+
+function render() {
+  renderInputs();
+  renderTable();
+}
+
+// ── CSV EXPORT ──
+function exportCSV() {
+  const rows = [["Tool","Study/Reference","Study Type","Year","Country","N","Notes"]];
+  tools.forEach(tool => {
+    tool.studies.forEach(s => {
+      rows.push([tool.name, s.name, s.type, s.year, s.country, s.n, s.notes]);
+    });
+    // Summary row
+    const typeList = [...new Set(tool.studies.map(s => s.type))].join("; ");
+    const toolN = tool.studies.reduce((a,s)=>{const n=parseInt(s.n);return a+(isNaN(n)?0:n)},0);
+    rows.push([tool.name + " — SUMMARY",
+      tool.studies.length + " studies total",
+      typeList, "", "",
+      toolN > 0 ? toolN : "", ""]);
+  });
+  const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "review_overview.csv"; a.click();
+}
+
+// ── SEED WITH ONE TOOL ──
+addTool();
+</script>
+</body>
+</html>
