@@ -1,4 +1,4 @@
-# AI — Robustness & Transparency Review Suite
+# Medical AI — Robustness & Transparency Review Suite
 
 A set of browser-based tools and documents for a study-based robustness assessment
 of mature medical AI.
