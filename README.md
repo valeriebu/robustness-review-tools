@@ -1,7 +1,7 @@
-# AI Mental Health Tools — Robustness & Transparency Review Suite
+# AI — Robustness & Transparency Review Suite
 
-A set of browser-based tools and Word documents for conducting systematic reviews
-of AI clinical decision support systems in mental health.
+A set of browser-based tools and documents for a study-based robustness assessment
+of mature medical AI.
 
 ---
 
