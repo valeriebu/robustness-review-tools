@@ -7,428 +7,411 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; padding: 24px; font-size: 13px; }
+body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; padding: 20px; font-size: 13px; }
 
-h1 { color: #1F4E79; font-size: 19px; margin-bottom: 4px; }
-.subtitle { color: #777; font-size: 12px; margin-bottom: 20px; }
+.page-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.page-title { color: #1F4E79; font-size: 19px; font-weight: bold; }
+.header-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hbtn { padding: 6px 14px; color: white; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-family: Arial; }
+.hbtn-save  { background: #1F4E79; }
+.hbtn-load  { background: #555; }
+.hbtn-clear { background: #c00; }
+.hbtn-csv   { background: #375623; }
+.hbtn:hover { opacity: 0.85; }
+.hbtn.saved { background: #375623 !important; }
+.save-status { font-size: 11px; color: #888; font-style: italic; }
 
-/* ── LAYOUT ── */
-.layout { display: flex; gap: 20px; align-items: flex-start; }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid #1F4E79; }
+.tab { padding: 7px 18px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 13px; font-weight: bold; background: #dce3ec; color: #555; border: none; font-family: Arial; }
+.tab.active { background: #1F4E79; color: white; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.layout { display: flex; gap: 18px; align-items: flex-start; }
 .left  { width: 400px; flex-shrink: 0; }
 .right { flex: 1; min-width: 0; }
 
-/* ── TOOL CARDS ── */
-.tool-card {
-  background: white; border-radius: 8px; border: 1px solid #dce3ec;
-  margin-bottom: 14px; overflow: hidden;
-}
-.tool-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; background: #f7f9fc; border-bottom: 1px solid #eee;
-}
+.tool-card { background: white; border-radius: 8px; border: 1px solid #dce3ec; margin-bottom: 12px; overflow: hidden; }
+.tool-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f7f9fc; border-bottom: 1px solid #eee; }
 .tool-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
-.tool-name-inp {
-  flex: 1; border: 1px solid #ccc; border-radius: 4px;
-  padding: 4px 8px; font-size: 13px; font-weight: bold;
-  font-family: Arial; color: #1F4E79;
-}
+.tool-name-inp { flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 13px; font-weight: bold; font-family: Arial; color: #1F4E79; }
 .remove-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 17px; }
 .remove-btn:hover { color: #c00; }
+.steps-list { padding: 8px 14px 4px; }
 
-/* ── STEPS ── */
-.steps-list { padding: 10px 14px 4px; }
-
-/* Step colors */
-.step-1 { --sc: #4472C4; --sl: #DEEAF1; }
-.step-2 { --sc: #70AD47; --sl: #E2EFDA; }
-.step-3 { --sc: #FFC000; --sl: #FFF2CC; }
-.step-4 { --sc: #ED7D31; --sl: #FCE4D6; }
-.step-5 { --sc: #C00000; --sl: #FDEDED; }
-
-.step-row {
-  border-radius: 6px; border: 1px solid #e8edf3;
-  margin-bottom: 8px; overflow: hidden;
-}
-.step-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px;
-  background: var(--sl);
-  border-bottom: 1px solid #e8edf3;
-}
-.step-num {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--sc); color: white;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: bold; flex-shrink: 0;
-}
-.step-label { font-weight: bold; font-size: 12px; color: #333; flex: 1; }
-.step-hint  { font-size: 10px; color: #888; font-style: italic; }
-
-.step-body { padding: 8px 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-.field-group { display: flex; flex-direction: column; gap: 3px; }
-.field-label { font-size: 10px; color: #777; font-weight: bold; text-transform: uppercase; }
-.field-inp {
-  border: 1px solid #ddd; border-radius: 4px; padding: 4px 7px;
-  font-size: 12px; font-family: Arial; background: white; width: 100%;
-}
-.field-inp:focus { outline: none; border-color: var(--sc, #2E74B5); }
-.field-inp.na { background: #f5f5f5; color: #bbb; font-style: italic; }
-
-.conducted-row { padding: 6px 10px 8px; display: flex; align-items: center; gap: 8px; }
-.conducted-label { font-size: 11px; color: #666; }
+.step-row { border-radius: 6px; border: 1px solid #e8edf3; margin-bottom: 7px; overflow: hidden; }
+.step-header { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid #e8edf3; }
+.step-num { width: 20px; height: 20px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; flex-shrink: 0; }
+.step-label { font-weight: bold; font-size: 11px; color: #333; }
+.conducted-row { padding: 5px 10px; display: flex; align-items: center; gap: 8px; background: #fafafa; }
+.conducted-label { font-size: 10px; color: #666; font-weight: bold; min-width: 70px; }
 .radio-group { display: flex; gap: 10px; }
 .radio-group label { font-size: 11px; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+.step-body { padding: 7px 10px 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.field-group { display: flex; flex-direction: column; gap: 3px; }
+.field-label { font-size: 10px; color: #777; font-weight: bold; text-transform: uppercase; }
+.field-inp { border: 1px solid #ddd; border-radius: 3px; padding: 4px 7px; font-size: 12px; font-family: Arial; width: 100%; }
+.field-inp.na { background: #f5f5f5; color: #bbb; }
+.field-inp:focus { outline: none; border-color: #2E74B5; }
 
-/* ── ADD/REMOVE TOOLS ── */
-.add-tool-btn {
-  width: 100%; padding: 9px; background: #1F4E79; color: white;
-  border: none; border-radius: 6px; font-size: 13px; font-weight: bold;
-  cursor: pointer; font-family: Arial; margin-bottom: 6px;
-}
+.add-tool-btn { width: 100%; padding: 9px; background: #1F4E79; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; font-family: Arial; margin-bottom: 6px; }
 .add-tool-btn:hover { background: #2E74B5; }
 
-/* ── RIGHT PANEL ── */
-.chart-box {
-  background: white; border-radius: 8px; border: 1px solid #dce3ec;
-  padding: 18px; margin-bottom: 14px;
-}
-.chart-title { font-size: 14px; font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
-.chart-sub   { font-size: 11px; color: #999; margin-bottom: 14px; font-style: italic; }
-
-.legend-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.chart-box { background: white; border-radius: 8px; border: 1px solid #dce3ec; padding: 16px; margin-bottom: 14px; }
+.chart-title { font-size: 13px; font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
+.chart-sub   { font-size: 11px; color: #999; margin-bottom: 12px; font-style: italic; }
+.legend-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
-.legend-dot  { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.export-btn  { margin-top: 8px; padding: 5px 12px; background: #2E74B5; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; font-family: Arial; }
 
-.export-btn {
-  margin-top: 10px; padding: 6px 14px; background: #2E74B5; color: white;
-  border: none; border-radius: 5px; font-size: 11px; cursor: pointer; font-family: Arial;
-}
-.export-btn:hover { background: #1F4E79; }
+.cascade-box { background: white; border-radius: 8px; padding: 16px; border: 1px solid #dce3ec; }
+.cascade-title { font-size: 13px; font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
+.cascade-sub   { font-size: 11px; color: #999; margin-bottom: 10px; font-style: italic; }
+table.ctab { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.ctab th { padding: 6px 8px; text-align: center; font-size: 11px; white-space: nowrap; }
+table.ctab td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; text-align: center; }
+table.ctab tr:hover td { background: #fafafa; }
+.th-tool { background: #1F4E79; color: white; text-align: left !important; }
+.th-1 { background: #4472C4; color: white; }
+.th-2 { background: #70AD47; color: white; }
+.th-3 { background: #BF8F00; color: white; }
+.th-4 { background: #ED7D31; color: white; }
+.th-5 { background: #C00000; color: white; }
+.th-drop { background: #444; color: white; font-size: 10px; }
+.th-depth { background: #333; color: white; }
 
-/* ── CASCADE TABLE ── */
-.cascade-table-box {
-  background: white; border-radius: 8px; border: 1px solid #dce3ec;
-  padding: 18px;
-}
-.cascade-table-title { font-size: 14px; font-weight: bold; color: #1F4E79; margin-bottom: 4px; }
-.cascade-table-sub   { font-size: 11px; color: #999; margin-bottom: 12px; font-style: italic; }
-
-table.ctable { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.ctable th {
-  padding: 7px 10px; text-align: left; font-size: 11px;
-  background: #1F4E79; color: white; white-space: nowrap;
-}
-table.ctable th.step-th-1 { background: #4472C4; }
-table.ctable th.step-th-2 { background: #70AD47; }
-table.ctable th.step-th-3 { background: #FFC000; color: #333; }
-table.ctable th.step-th-4 { background: #ED7D31; }
-table.ctable th.step-th-5 { background: #C00000; }
-
-table.ctable td {
-  padding: 6px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle;
-}
-table.ctable tr:hover td { background: #fafafa; }
-
-.perf-cell { display: flex; align-items: center; gap: 6px; }
-.perf-bar-wrap {
-  width: 60px; height: 8px; background: #eee;
-  border-radius: 4px; flex-shrink: 0;
-}
-.perf-bar { height: 100%; border-radius: 4px; }
-
-/* Drop indicator */
-.drop-badge {
-  display: inline-block; padding: 2px 7px; border-radius: 10px;
-  font-size: 10px; font-weight: bold; white-space: nowrap;
-}
-.drop-none     { background: #E2EFDA; color: #375623; }
+.drop-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: bold; white-space: nowrap; }
+.drop-na       { background: #F2F2F2; color: #999; font-style: italic; }
+.drop-stable   { background: #E2EFDA; color: #375623; }
 .drop-small    { background: #FFF2CC; color: #7B6000; }
 .drop-moderate { background: #FCE4D6; color: #843500; }
 .drop-large    { background: #FDEDED; color: #9C0006; }
-.drop-na       { background: #F2F2F2; color: #999; font-style: italic; }
-
+.drop-gain     { background: #DDEEFF; color: #003366; }
 .not-done { color: #bbb; font-style: italic; font-size: 11px; }
+.perf-cell { display: flex; align-items: center; gap: 5px; justify-content: center; }
+.perf-bar-wrap { width: 45px; height: 7px; background: #eee; border-radius: 3px; flex-shrink: 0; }
+.perf-bar { height: 100%; border-radius: 3px; }
 
-/* Step description strip */
-.step-strip {
-  display: flex; gap: 0; margin-bottom: 14px; border-radius: 6px; overflow: hidden;
-  border: 1px solid #dce3ec;
-}
-.strip-step {
-  flex: 1; padding: 8px 10px; text-align: center; font-size: 11px;
-}
-.strip-step .snum {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 50%;
-  color: white; font-size: 10px; font-weight: bold; margin-bottom: 3px;
-}
-.strip-step .slabel { font-weight: bold; font-size: 10px; display: block; }
-.strip-step .sdesc  { font-size: 10px; color: #777; display: block; line-height: 1.3; margin-top: 2px; }
+/* synthesis */
+.synth-box { background: white; border-radius: 8px; padding: 20px; border: 1px solid #dce3ec; margin-bottom: 16px; }
+.synth-title { font-size: 14px; font-weight: bold; color: #1F4E79; margin-bottom: 12px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 4px; }
+.kpi-card { border: 1px solid #dce3ec; border-radius: 6px; padding: 12px; text-align: center; }
+.kpi-label { font-size: 11px; color: #777; margin-bottom: 6px; line-height: 1.3; }
+.kpi-value { font-size: 24px; font-weight: bold; }
+.kpi-sub { font-size: 10px; color: #aaa; margin-top: 2px; }
+table.synth-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.synth-table th { background: #1F4E79; color: white; padding: 6px 10px; text-align: left; font-size: 11px; }
+table.synth-table td { padding: 5px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.ev-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; display: inline-block; width: 70px; vertical-align: middle; margin-right: 5px; }
+.ev-fill { height: 100%; border-radius: 4px; }
+.fc { color: #c00; font-weight: bold; font-size: 11px; }
+.fo { color: #375623; font-size: 11px; }
+.fp { color: #7B6000; font-size: 11px; }
+.fn { color: #aaa; font-size: 11px; font-style: italic; }
 </style>
 </head>
 <body>
 
-<h1>Validation Cascade</h1>
-<p class="subtitle">Track model performance across each validation step — and see where it drops</p>
-
-<div class="layout">
-
-  <!-- ── INPUT PANEL ── -->
-  <div class="left">
-    <div id="tools-container"></div>
-    <button class="add-tool-btn" onclick="addTool()">+ Add Tool</button>
-    <p style="font-size:11px;color:#999;font-style:italic;margin-top:4px">
-      Leave steps blank if not conducted. Enter the primary performance metric
-      (e.g. AUC, accuracy, F1, remission rate) consistently across steps for each tool.
-    </p>
+<div class="page-header">
+  <div>
+    <div class="page-title">Validation Cascade</div>
+    <div style="color:#777;font-size:12px;margin-top:2px">Track performance across validation steps — see where it drops</div>
   </div>
+  <div class="header-btns">
+    <span class="save-status" id="save-status">No saved data</span>
+    <button class="hbtn hbtn-save" onclick="saveData()">💾 Save</button>
+    <button class="hbtn hbtn-load" onclick="loadData()">📂 Load</button>
+    <button class="hbtn hbtn-csv"  onclick="exportCSV()">⬇ CSV</button>
+    <button class="hbtn hbtn-clear" onclick="clearAll()">🗑 Clear</button>
+  </div>
+</div>
 
-  <!-- ── RIGHT PANEL ── -->
-  <div class="right">
+<div class="tabs">
+  <button class="tab active" id="tab-btn-cascade"   onclick="switchTab('cascade',this)">Cascade View</button>
+  <button class="tab"        id="tab-btn-synthesis" onclick="switchTab('synthesis',this)">Cross-Tool Synthesis</button>
+</div>
 
-    <!-- Step descriptions -->
-    <div class="step-strip">
-      <div class="strip-step" style="background:#DEEAF1">
-        <div class="snum" style="background:#4472C4">1</div>
-        <span class="slabel">Training Set</span>
-        <span class="sdesc">How well the model learned — expected to be highest</span>
-      </div>
-      <div class="strip-step" style="background:#E2EFDA">
-        <div class="snum" style="background:#70AD47">2</div>
-        <span class="slabel">Internal Test</span>
-        <span class="sdesc">Generalised beyond training data (same source, held out)</span>
-      </div>
-      <div class="strip-step" style="background:#FFF2CC">
-        <div class="snum" style="background:#FFC000;color:#333">3</div>
-        <span class="slabel">Retrospective External</span>
-        <span class="sdesc">Holds up in different dataset / institution / time</span>
-      </div>
-      <div class="strip-step" style="background:#FCE4D6">
-        <div class="snum" style="background:#ED7D31">4</div>
-        <span class="slabel">Prospective External</span>
-        <span class="sdesc">Works in real deployment on new patients in real time</span>
-      </div>
-      <div class="strip-step" style="background:#FDEDED">
-        <div class="snum" style="background:#C00000">5</div>
-        <span class="slabel">RCT / Clinical</span>
-        <span class="sdesc">Improves actual clinical outcomes when used by clinicians</span>
-      </div>
+<!-- TAB 1 -->
+<div id="tab-cascade" class="tab-panel active">
+  <div class="layout">
+    <div class="left">
+      <div id="tools-container"></div>
+      <button class="add-tool-btn" onclick="addTool()">+ Add Tool</button>
+      <p style="font-size:11px;color:#999;font-style:italic;margin-top:4px">
+        Enter values 0–100 (e.g. AUC 0.72 → type 72, remission rate 52% → type 52).<br>
+        Drops are calculated vs. the previous step that has a value — gaps are skipped correctly.
+      </p>
     </div>
 
-    <!-- Line chart -->
-    <div class="chart-box">
-      <div class="chart-title">Performance Across Validation Steps</div>
-      <div class="chart-sub">
-        Enter numeric performance values (0–100) for each step.
-        Gaps = step not conducted. Drops highlighted automatically.
+    <div class="right">
+      <!-- Step strip -->
+      <div style="display:flex;gap:0;margin-bottom:14px;border-radius:6px;overflow:hidden;border:1px solid #dce3ec">
+        <div style="flex:1;padding:8px 6px;text-align:center;background:#DEEAF1">
+          <div style="width:18px;height:18px;border-radius:50%;background:#4472C4;color:white;font-size:10px;font-weight:bold;display:inline-flex;align-items:center;justify-content:center;margin-bottom:2px">1</div>
+          <div style="font-weight:bold;font-size:10px;margin-top:2px">Training Set</div>
+          <div style="font-size:9px;color:#777;margin-top:1px">How well model learned</div>
+        </div>
+        <div style="flex:1;padding:8px 6px;text-align:center;background:#E2EFDA">
+          <div style="width:18px;height:18px;border-radius:50%;background:#70AD47;color:white;font-size:10px;font-weight:bold;display:inline-flex;align-items:center;justify-content:center;margin-bottom:2px">2</div>
+          <div style="font-weight:bold;font-size:10px;margin-top:2px">Internal Test</div>
+          <div style="font-size:9px;color:#777;margin-top:1px">Held-out, same source</div>
+        </div>
+        <div style="flex:1;padding:8px 6px;text-align:center;background:#FFF2CC">
+          <div style="width:18px;height:18px;border-radius:50%;background:#BF8F00;color:white;font-size:10px;font-weight:bold;display:inline-flex;align-items:center;justify-content:center;margin-bottom:2px">3</div>
+          <div style="font-weight:bold;font-size:10px;margin-top:2px">Retro. External</div>
+          <div style="font-size:9px;color:#777;margin-top:1px">Different institution</div>
+        </div>
+        <div style="flex:1;padding:8px 6px;text-align:center;background:#FCE4D6">
+          <div style="width:18px;height:18px;border-radius:50%;background:#ED7D31;color:white;font-size:10px;font-weight:bold;display:inline-flex;align-items:center;justify-content:center;margin-bottom:2px">4</div>
+          <div style="font-weight:bold;font-size:10px;margin-top:2px">Prosp. External</div>
+          <div style="font-size:9px;color:#777;margin-top:1px">Real deployment</div>
+        </div>
+        <div style="flex:1;padding:8px 6px;text-align:center;background:#FDEDED">
+          <div style="width:18px;height:18px;border-radius:50%;background:#C00000;color:white;font-size:10px;font-weight:bold;display:inline-flex;align-items:center;justify-content:center;margin-bottom:2px">5</div>
+          <div style="font-weight:bold;font-size:10px;margin-top:2px">RCT / Clinical</div>
+          <div style="font-size:9px;color:#777;margin-top:1px">Clinical outcome</div>
+        </div>
       </div>
-      <canvas id="cascadeChart" height="320"></canvas>
-      <div class="legend-row" id="chart-legend"></div>
-      <button class="export-btn" onclick="exportChart()">Export PNG</button>
-    </div>
 
-    <!-- Cascade table -->
-    <div class="cascade-table-box">
-      <div class="cascade-table-title">Cascade Summary Table</div>
-      <div class="cascade-table-sub">
-        Drop from previous step: &nbsp;
-        <span class="drop-badge drop-none">Stable (≤2)</span> &nbsp;
-        <span class="drop-badge drop-small">Small drop (3–9)</span> &nbsp;
-        <span class="drop-badge drop-moderate">Moderate drop (10–19)</span> &nbsp;
-        <span class="drop-badge drop-large">Large drop (≥20)</span>
+      <div class="chart-box">
+        <div class="chart-title">Performance Across Validation Steps</div>
+        <div class="chart-sub">Gaps = step not conducted. Drop badges calculated vs. last available value (not just adjacent step).</div>
+        <canvas id="cascadeChart" height="300"></canvas>
+        <div class="legend-row" id="chart-legend"></div>
+        <button class="export-btn" onclick="exportChart()">Export PNG</button>
       </div>
-      <div id="cascade-table-container"></div>
-    </div>
 
+      <div class="cascade-box">
+        <div class="cascade-title">Cascade Summary Table</div>
+        <div class="cascade-sub">
+          Drop vs. last available step: &nbsp;
+          <span class="drop-badge drop-stable">≤2 stable</span>&nbsp;
+          <span class="drop-badge drop-small">▼ 3–9</span>&nbsp;
+          <span class="drop-badge drop-moderate">▼ 10–19</span>&nbsp;
+          <span class="drop-badge drop-large">▼ ≥20 large</span>&nbsp;
+          <span class="drop-badge drop-gain">▲ gain</span>
+        </div>
+        <div id="cascade-table-container" style="overflow-x:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div id="tab-synthesis" class="tab-panel">
+  <div id="synthesis-container">
+    <div style="color:#bbb;font-style:italic;padding:40px;text-align:center">Add tools in the Cascade View tab first.</div>
   </div>
 </div>
 
 <script>
-// ── STEP DEFINITIONS ──
 const STEPS = [
-  { num: 1, label: "Training Set",           color: "#4472C4", light: "#DEEAF1", cls: "step-1",
-    hint: "Performance on data the model was trained on" },
-  { num: 2, label: "Internal Test Set",      color: "#70AD47", light: "#E2EFDA", cls: "step-2",
-    hint: "Held-out portion of the same dataset" },
-  { num: 3, label: "Retrospective External", color: "#FFC000", light: "#FFF2CC", cls: "step-3",
-    hint: "Different institution/dataset, historical data" },
-  { num: 4, label: "Prospective External",   color: "#ED7D31", light: "#FCE4D6", cls: "step-4",
-    hint: "Real deployment, new patients, real time" },
-  { num: 5, label: "RCT / Clinical Study",   color: "#C00000", light: "#FDEDED", cls: "step-5",
-    hint: "Clinical outcome evidence (e.g. remission rate, effect size)" },
+  { num:1, label:"Training Set",           color:"#4472C4", light:"#DEEAF1" },
+  { num:2, label:"Internal Test Set",      color:"#70AD47", light:"#E2EFDA" },
+  { num:3, label:"Retrospective External", color:"#BF8F00", light:"#FFF2CC" },
+  { num:4, label:"Prospective External",   color:"#ED7D31", light:"#FCE4D6" },
+  { num:5, label:"RCT / Clinical Study",   color:"#C00000", light:"#FDEDED" },
 ];
-
-const TOOL_COLORS = [
-  "#1F4E79","#C00000","#375623","#7B3F00","#4B0082",
-  "#00695C","#BF360C","#1A237E","#4A148C","#1B5E20"
-];
+const TOOL_COLORS = ["#1F4E79","#C00000","#375623","#7B3F00","#4B0082","#00695C","#BF360C","#1A237E"];
+const DEPTH_LABELS = ["None","Training only","Internal test","Retro. external","Prosp. external","Full (RCT)"];
+const DEPTH_COLORS = ["#ccc","#4472C4","#70AD47","#BF8F00","#ED7D31","#C00000"];
 
 let tools = [];
 let chart = null;
 let toolCounter = 0;
 
+// ── SAVE / LOAD ──
+function saveData() {
+  const data = { tools, toolCounter, savedAt: new Date().toISOString() };
+  localStorage.setItem('validationCascade_v2', JSON.stringify(data));
+  const btn = document.querySelector('.hbtn-save');
+  btn.textContent = '✓ Saved!';
+  btn.classList.add('saved');
+  setTimeout(() => { btn.textContent = '💾 Save'; btn.classList.remove('saved'); }, 2000);
+  updateSaveStatus();
+}
+
+function loadData() {
+  const raw = localStorage.getItem('validationCascade_v2');
+  if (!raw) { alert('No saved data found in this browser.'); return; }
+  try {
+    const data = JSON.parse(raw);
+    tools = data.tools || [];
+    toolCounter = data.toolCounter || tools.length;
+    chart = null; // force chart rebuild
+    renderInputs();
+    updateAll();
+    updateSaveStatus();
+  } catch(e) { alert('Error loading saved data: ' + e.message); }
+}
+
+function clearAll() {
+  if (!confirm('Clear all tools and data? This cannot be undone.')) return;
+  tools = []; toolCounter = 0;
+  if (chart) { chart.destroy(); chart = null; }
+  renderInputs(); updateAll();
+}
+
+function updateSaveStatus() {
+  const raw = localStorage.getItem('validationCascade_v2');
+  const el = document.getElementById('save-status');
+  if (!raw) { el.textContent = 'No saved data'; return; }
+  const d = new Date(JSON.parse(raw).savedAt);
+  el.textContent = `Saved ${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+}
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'synthesis') renderSynthesis();
+}
+
+// ── TOOL MANAGEMENT ──
 function addTool() {
   const id = "t" + (++toolCounter);
-  const color = TOOL_COLORS[(toolCounter - 1) % TOOL_COLORS.length];
-  tools.push({
-    id, color,
+  tools.push({ id, color: TOOL_COLORS[(toolCounter-1) % TOOL_COLORS.length],
     name: "Tool " + toolCounter,
-    metric: "",   // e.g. "AUC", "Accuracy", "Remission rate"
-    steps: STEPS.map(s => ({ conducted: null, value: "", note: "" }))
+    steps: STEPS.map(() => ({ conducted: null, value: "", metric: "", note: "" }))
   });
-  renderInputs();
-  updateChart();
+  renderInputs(); updateAll();
 }
 
 function removeTool(id) {
   tools = tools.filter(t => t.id !== id);
-  renderInputs();
-  updateChart();
+  renderInputs(); updateAll();
+}
+
+function setConducted(tidx, sidx, val) {
+  tools[tidx].steps[sidx].conducted = val;
+  if (val === 'no') tools[tidx].steps[sidx].value = "";
+  renderInputs(); updateAll();
+}
+
+function setField(tidx, sidx, field, val) {
+  tools[tidx].steps[sidx][field] = val;
+  updateAll();
 }
 
 // ── RENDER INPUT PANEL ──
 function renderInputs() {
   const container = document.getElementById("tools-container");
   container.innerHTML = "";
-
   tools.forEach((tool, tidx) => {
-    const card = document.createElement("div");
-    card.className = "tool-card";
-
-    const stepsHtml = STEPS.map((step, sidx) => `
-      <div class="step-row ${step.cls}">
-        <div class="step-header">
-          <div class="step-num">${step.num}</div>
-          <div>
-            <div class="step-label">${step.label}</div>
-            <div class="step-hint">${step.hint}</div>
-          </div>
+    const div = document.createElement("div");
+    div.className = "tool-card";
+    const stepsHtml = STEPS.map((step, sidx) => {
+      const s = tool.steps[sidx];
+      const isNo = s.conducted === 'no';
+      return `
+      <div class="step-row" style="--sc:${step.color};--sl:${step.light}">
+        <div class="step-header" style="background:${step.light}">
+          <div class="step-num" style="background:${step.color}">${step.num}</div>
+          <span class="step-label">${step.label}</span>
         </div>
         <div class="conducted-row">
           <span class="conducted-label">Conducted?</span>
           <div class="radio-group">
-            <label><input type="radio" name="cond_${tool.id}_${sidx}" value="yes"
-              ${tool.steps[sidx].conducted === 'yes' ? 'checked' : ''}
-              onchange="setConducted(${tidx},${sidx},'yes')"> Yes</label>
-            <label><input type="radio" name="cond_${tool.id}_${sidx}" value="no"
-              ${tool.steps[sidx].conducted === 'no' ? 'checked' : ''}
-              onchange="setConducted(${tidx},${sidx},'no')"> No</label>
-            <label><input type="radio" name="cond_${tool.id}_${sidx}" value="unclear"
-              ${tool.steps[sidx].conducted === 'unclear' ? 'checked' : ''}
-              onchange="setConducted(${tidx},${sidx},'unclear')"> Unclear</label>
+            <label><input type="radio" name="c_${tool.id}_${sidx}" value="yes" ${s.conducted==='yes'?'checked':''} onchange="setConducted(${tidx},${sidx},'yes')"> Yes</label>
+            <label><input type="radio" name="c_${tool.id}_${sidx}" value="no"  ${s.conducted==='no' ?'checked':''} onchange="setConducted(${tidx},${sidx},'no')"> No</label>
+            <label><input type="radio" name="c_${tool.id}_${sidx}" value="unclear" ${s.conducted==='unclear'?'checked':''} onchange="setConducted(${tidx},${sidx},'unclear')"> Unclear</label>
           </div>
         </div>
         <div class="step-body">
           <div class="field-group">
             <div class="field-label">Value (0–100)</div>
-            <input class="field-inp ${tool.steps[sidx].conducted === 'no' ? 'na' : ''}"
-              type="number" min="0" max="100" step="0.1"
-              placeholder="${tool.steps[sidx].conducted === 'no' ? 'N/A' : '0–100'}"
-              ${tool.steps[sidx].conducted === 'no' ? 'disabled' : ''}
-              value="${tool.steps[sidx].value}"
-              oninput="setStepField(${tidx},${sidx},'value',this.value)" />
+            <input class="field-inp${isNo?' na':''}" type="number" min="0" max="100" step="0.1"
+              placeholder="${isNo?'N/A':'e.g. 72'}" ${isNo?'disabled':''}
+              value="${s.value}" oninput="setField(${tidx},${sidx},'value',this.value)" />
           </div>
           <div class="field-group">
-            <div class="field-label">Metric (e.g. AUC)</div>
-            <input class="field-inp" type="text" placeholder="AUC, F1, remission %..."
-              value="${tool.steps[sidx].metric || ''}"
-              oninput="setStepField(${tidx},${sidx},'metric',this.value)" />
+            <div class="field-label">Metric</div>
+            <input class="field-inp" type="text" placeholder="AUC, RCSI %..."
+              value="${s.metric}" oninput="setField(${tidx},${sidx},'metric',this.value)" />
           </div>
           <div class="field-group">
             <div class="field-label">Notes / CI</div>
-            <input class="field-inp" type="text" placeholder="e.g. 95% CI [0.61–0.79]"
-              value="${tool.steps[sidx].note}"
-              oninput="setStepField(${tidx},${sidx},'note',this.value)" />
+            <input class="field-inp" type="text" placeholder="CI, p-value..."
+              value="${s.note}" oninput="setField(${tidx},${sidx},'note',this.value)" />
           </div>
         </div>
-      </div>`).join("");
-
-    card.innerHTML = `
+      </div>`;
+    }).join("");
+    div.innerHTML = `
       <div class="tool-header">
         <div class="tool-dot" style="background:${tool.color}"></div>
         <input class="tool-name-inp" value="${tool.name}"
-          oninput="tools[${tidx}].name=this.value; updateChart()"
-          placeholder="Tool name" />
+          oninput="tools[${tidx}].name=this.value; updateAll()" placeholder="Tool name" />
         <button class="remove-btn" onclick="removeTool('${tool.id}')">×</button>
       </div>
       <div class="steps-list">${stepsHtml}</div>`;
-
-    container.appendChild(card);
+    container.appendChild(div);
   });
 }
 
-function setConducted(tidx, sidx, val) {
-  tools[tidx].steps[sidx].conducted = val;
-  if (val === 'no') tools[tidx].steps[sidx].value = "";
-  renderInputs();
-  updateChart();
+// ── GET NUMERIC VALUE (null if unavailable) ──
+function getVal(step) {
+  if (!step || step.conducted === 'no' || step.conducted === 'unclear') return null;
+  const v = parseFloat(step.value);
+  return isNaN(v) ? null : v;
 }
 
-function setStepField(tidx, sidx, field, val) {
-  tools[tidx].steps[sidx][field] = val;
-  updateChart();
+// ── DROP BADGE — fixed: drop vs LAST AVAILABLE value ──
+function dropBadge(curr, lastAvail) {
+  if (lastAvail === null || curr === null) return `<span class="drop-badge drop-na">—</span>`;
+  const diff = lastAvail - curr; // positive = drop, negative = gain
+  if (diff >= 20) return `<span class="drop-badge drop-large">▼ ${diff.toFixed(1)}</span>`;
+  if (diff >= 10) return `<span class="drop-badge drop-moderate">▼ ${diff.toFixed(1)}</span>`;
+  if (diff >= 3)  return `<span class="drop-badge drop-small">▼ ${diff.toFixed(1)}</span>`;
+  if (diff > 0)   return `<span class="drop-badge drop-stable">▼ ${diff.toFixed(1)}</span>`;
+  if (diff === 0) return `<span class="drop-badge drop-stable">= 0</span>`;
+  return `<span class="drop-badge drop-gain">▲ ${Math.abs(diff).toFixed(1)}</span>`;
 }
 
-// ── CHART ──
-function getChartData() {
-  return tools.map(tool => ({
-    label: tool.name,
-    data: tool.steps.map((s, i) => {
-      if (s.conducted === 'no' || s.conducted === 'unclear') return null;
-      const v = parseFloat(s.value);
-      return isNaN(v) ? null : v;
-    }),
-    borderColor: tool.color,
-    backgroundColor: hexToRgba(tool.color, 0.08),
-    borderWidth: 2.5,
-    pointBackgroundColor: tool.steps.map(s => {
-      if (s.conducted === 'no') return '#ccc';
-      return tool.color;
-    }),
-    pointRadius: 6,
-    pointHoverRadius: 8,
-    tension: 0.3,
-    spanGaps: false,
-  }));
+// ── UPDATE EVERYTHING ──
+function updateAll() {
+  updateChart();
+  renderCascadeTable();
 }
 
 function updateChart() {
-  const labels = STEPS.map(s => s.label);
-  const datasets = getChartData();
+  const datasets = tools.map(tool => ({
+    label: tool.name || "Unnamed",
+    data: STEPS.map((_, i) => getVal(tool.steps[i])),
+    borderColor: tool.color,
+    backgroundColor: hexToRgba(tool.color, 0.07),
+    borderWidth: 2.5,
+    pointBackgroundColor: STEPS.map((_, i) => getVal(tool.steps[i]) !== null ? tool.color : 'rgba(0,0,0,0)'),
+    pointRadius: STEPS.map((_, i) => getVal(tool.steps[i]) !== null ? 5 : 0),
+    tension: 0.3,
+    spanGaps: false,
+  }));
 
   if (!chart) {
-    chart = new Chart(document.getElementById("cascadeChart").getContext("2d"), {
+    const ctx = document.getElementById("cascadeChart").getContext("2d");
+    chart = new Chart(ctx, {
       type: "line",
-      data: { labels, datasets },
+      data: { labels: STEPS.map(s => s.label), datasets },
       options: {
         responsive: true,
         scales: {
-          y: {
-            min: 0, max: 100,
-            title: { display: true, text: "Performance (0–100)", font: { size: 11 } },
-            ticks: { font: { size: 11 } },
-            grid: { color: "rgba(0,0,0,0.06)" }
+          y: { min:0, max:100,
+            title: { display:true, text:"Performance (0–100)", font:{size:11} },
+            ticks: { font:{size:11} }, grid: { color:"rgba(0,0,0,0.05)" }
           },
-          x: {
-            ticks: { font: { size: 11 } },
-            grid: { color: "rgba(0,0,0,0.06)" }
-          }
+          x: { ticks: { font:{size:11} }, grid: { color:"rgba(0,0,0,0.05)" } }
         },
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const tool = tools[ctx.datasetIndex];
-                const step = tool.steps[ctx.dataIndex];
-                const val = ctx.raw != null ? ctx.raw : "—";
-                const metric = step.metric || "value";
-                const note = step.note ? ` (${step.note})` : "";
-                return `${ctx.dataset.label}: ${val} [${metric}]${note}`;
-              }
-            }
-          },
-          // Annotation for drop zones — handled in table instead
+          tooltip: { callbacks: { label: ctx => {
+            const tool = tools[ctx.datasetIndex];
+            if (!tool) return '';
+            const s = tool.steps[ctx.dataIndex];
+            return `${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw : '—'} [${s.metric||'value'}]${s.note ? ' ('+s.note+')' : ''}`;
+          }}}
         }
       }
     });
@@ -437,118 +420,252 @@ function updateChart() {
     chart.update();
   }
 
-  // Legend
-  document.getElementById("chart-legend").innerHTML = tools.map(t => `
-    <div class="legend-item">
-      <div class="legend-dot" style="background:${t.color}"></div>
-      <span>${t.name || "Unnamed"}</span>
-    </div>`).join("");
-
-  // Table
-  renderCascadeTable();
-}
-
-// ── CASCADE TABLE ──
-function dropBadge(prev, curr) {
-  if (prev === null || curr === null) return `<span class="drop-badge drop-na">—</span>`;
-  const diff = prev - curr;
-  if (diff >= 20) return `<span class="drop-badge drop-large">▼ ${diff.toFixed(1)} large drop</span>`;
-  if (diff >= 10) return `<span class="drop-badge drop-moderate">▼ ${diff.toFixed(1)} moderate</span>`;
-  if (diff >= 3)  return `<span class="drop-badge drop-small">▼ ${diff.toFixed(1)} small</span>`;
-  if (diff > 0)   return `<span class="drop-badge drop-none">▼ ${diff.toFixed(1)} stable</span>`;
-  if (diff === 0) return `<span class="drop-badge drop-none">= stable</span>`;
-  // improvement
-  return `<span class="drop-badge drop-none">▲ ${Math.abs(diff).toFixed(1)}</span>`;
+  document.getElementById("chart-legend").innerHTML = tools.map(t =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div><span>${t.name||"Unnamed"}</span></div>`
+  ).join("");
 }
 
 function renderCascadeTable() {
+  const container = document.getElementById("cascade-table-container");
   if (tools.length === 0) {
-    document.getElementById("cascade-table-container").innerHTML =
-      '<p style="color:#bbb;font-style:italic;padding:12px 0">Add a tool to see the cascade table.</p>';
+    container.innerHTML = '<p style="color:#bbb;font-style:italic;padding:12px">Add a tool to see the table.</p>';
     return;
   }
 
-  // Build: rows = tools, cols = steps + drop indicators
-  let html = `<table class="ctable"><thead><tr>
-    <th>Tool</th>`;
-
-  STEPS.forEach((s, i) => {
-    html += `<th class="step-th-${s.num}">
-      <div style="font-size:10px;opacity:0.85">Step ${s.num}</div>
-      ${s.label}
-    </th>`;
-    if (i < STEPS.length - 1) {
-      html += `<th style="background:#555;font-size:10px;text-align:center">
-        Drop<br>${s.num}→${s.num+1}
-      </th>`;
-    }
-  });
-
-  html += `<th style="background:#333">Evidence depth</th></tr></thead><tbody>`;
+  let html = `<table class="ctab"><thead><tr>
+    <th class="th-tool">Tool</th>
+    <th class="th-1">Step 1<br>Training</th>
+    <th class="th-drop">→2</th>
+    <th class="th-2">Step 2<br>Int. Test</th>
+    <th class="th-drop">→3</th>
+    <th class="th-3">Step 3<br>Retro.</th>
+    <th class="th-drop">→4</th>
+    <th class="th-4">Step 4<br>Prosp.</th>
+    <th class="th-drop">→5</th>
+    <th class="th-5">Step 5<br>RCT</th>
+    <th class="th-depth">Evidence depth</th>
+  </tr></thead><tbody>`;
 
   tools.forEach(tool => {
-    html += `<tr><td><strong style="color:${tool.color}">${tool.name || "Unnamed"}</strong></td>`;
+    const vals = STEPS.map((_, i) => getVal(tool.steps[i]));
 
-    let lastVal = null;
-    let stepsReached = 0;
+    // Depth = deepest step index (1-based) that has a value
+    let depth = 0;
+    vals.forEach((v, i) => { if (v !== null) depth = i + 1; });
 
-    tool.steps.forEach((step, sidx) => {
-      const val = step.conducted === 'no' ? null :
-                  step.conducted === 'unclear' ? null :
-                  (parseFloat(step.value) || null);
+    // Build prevAvail array: for each step, what is the last available value BEFORE this step
+    // This is the key fix — drop is vs. previous *available* value, not just previous step
+    const prevAvail = [];
+    let lastSeen = null;
+    for (let i = 0; i < 5; i++) {
+      prevAvail.push(lastSeen);
+      if (vals[i] !== null) lastSeen = vals[i];
+    }
 
-      const metric = step.metric || "";
-      const note   = step.note   || "";
+    html += `<tr><td style="text-align:left;font-weight:bold;color:${tool.color}">${tool.name||"Unnamed"}</td>`;
 
-      if (step.conducted === 'no') {
-        html += `<td><span class="not-done">Not conducted</span></td>`;
-      } else if (step.conducted === 'unclear') {
-        html += `<td><span class="not-done">Unclear</span></td>`;
-      } else if (val === null) {
+    for (let i = 0; i < 5; i++) {
+      const v = vals[i];
+      const c = tool.steps[i].conducted;
+      const metric = tool.steps[i].metric;
+      const note = tool.steps[i].note;
+
+      // Step value cell
+      if (c === 'no') {
+        html += `<td><span class="not-done">Not done</span></td>`;
+      } else if (v === null) {
         html += `<td><span class="not-done">—</span></td>`;
       } else {
-        stepsReached = sidx + 1;
-        const barColor = STEPS[sidx].color;
-        html += `<td>
+        const label = metric ? `${v} ${metric}` : String(v);
+        html += `<td${note?` title="${note}"`:''}>
           <div class="perf-cell">
-            <div class="perf-bar-wrap">
-              <div class="perf-bar" style="width:${val}%;background:${barColor}"></div>
-            </div>
-            <span><strong>${val}</strong>${metric ? ' ' + metric : ''}</span>
-          </div>
-          ${note ? `<div style="font-size:10px;color:#888;margin-top:2px">${note}</div>` : ''}
-        </td>`;
+            <div class="perf-bar-wrap"><div class="perf-bar" style="width:${v}%;background:${STEPS[i].color}"></div></div>
+            <strong>${label}</strong>
+          </div></td>`;
       }
 
-      // Drop column (not after last step)
-      if (sidx < STEPS.length - 1) {
-        html += `<td style="text-align:center">${dropBadge(lastVal, val)}</td>`;
+      // Drop column (between steps)
+      if (i < 4) {
+        // Drop from prevAvail[i+1] to vals[i+1]
+        // prevAvail[i+1] = last seen value before step i+1
+        html += `<td>${dropBadge(vals[i+1], prevAvail[i+1])}</td>`;
       }
+    }
 
-      if (val !== null) lastVal = val;
-    });
-
-    // Evidence depth
-    const depthLabels = ["None","Training only","Internal test","Retrospective ext.","Prospective ext.","Full (RCT)"];
-    const depthColors = ["#ccc","#4472C4","#70AD47","#FFC000","#ED7D31","#C00000"];
-    html += `<td>
-      <span style="font-size:11px;font-weight:bold;color:${depthColors[stepsReached]}">
-        ${depthLabels[stepsReached]}
-      </span>
-    </td>`;
-
-    html += `</tr>`;
+    html += `<td><span style="font-size:11px;font-weight:bold;color:${DEPTH_COLORS[depth]}">${DEPTH_LABELS[depth]}</span></td></tr>`;
   });
 
   html += `</tbody></table>`;
-  document.getElementById("cascade-table-container").innerHTML = html;
+  container.innerHTML = html;
 }
 
-function hexToRgba(hex, alpha) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${alpha})`;
+// ── SYNTHESIS ──
+function computeStats(tool) {
+  const vals = STEPS.map((_, i) => getVal(tool.steps[i]));
+  let depth = 0;
+  vals.forEach((v, i) => { if (v !== null) depth = i + 1; });
+
+  const available = vals.filter(v => v !== null);
+  const mean = available.length ? available.reduce((a,b)=>a+b,0)/available.length : null;
+  const stdDev = available.length > 1
+    ? Math.sqrt(available.reduce((s,v)=>s+Math.pow(v-mean,2),0)/available.length)
+    : null;
+
+  // Max drop: scan all pairs (i, j) where i < j and both have values, find largest drop
+  let maxDrop = null, maxDropLabel = null;
+  for (let i = 0; i < 4; i++) {
+    for (let j = i+1; j < 5; j++) {
+      if (vals[i] !== null && vals[j] !== null) {
+        const drop = vals[i] - vals[j];
+        if (maxDrop === null || drop > maxDrop) {
+          maxDrop = drop;
+          maxDropLabel = `${i+1}→${j+1}`;
+        }
+      }
+    }
+  }
+
+  // First-to-last trend (first available vs last available)
+  const trend = available.length >= 2 ? available[available.length-1] - available[0] : null;
+
+  const hasRetro = vals[2] !== null;
+  const hasProsp = vals[3] !== null || vals[4] !== null;
+
+  return { vals, depth, available, mean, stdDev, maxDrop, maxDropLabel, trend, hasRetro, hasProsp };
+}
+
+function renderSynthesis() {
+  const container = document.getElementById("synthesis-container");
+  if (tools.length === 0) {
+    container.innerHTML = '<div style="color:#bbb;font-style:italic;padding:40px;text-align:center">Add tools in Cascade View first.</div>';
+    return;
+  }
+
+  const stats = tools.map(t => ({ tool: t, ...computeStats(t) }));
+  const n = tools.length;
+  const nRetro   = stats.filter(s => s.hasRetro).length;
+  const nProsp   = stats.filter(s => s.hasProsp).length;
+  const nLarge   = stats.filter(s => s.maxDrop !== null && s.maxDrop >= 20).length;
+  const nFull    = stats.filter(s => s.depth === 5).length;
+  const avgDepth = (stats.reduce((a,s)=>a+s.depth,0)/n).toFixed(1);
+
+  // Field narrative
+  const missingExt = n - nRetro;
+  const missingProsp = n - nProsp;
+
+  let html = `
+  <div class="synth-box">
+    <div class="synth-title">Across-Tool Summary — ${n} tool${n!==1?'s':''}</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Tools with retrospective external validation</div>
+        <div class="kpi-value" style="color:${nRetro===n?'#375623':'#C00000'}">${nRetro} / ${n}</div>
+        <div class="kpi-sub">${Math.round(nRetro/n*100)}%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tools with prospective / RCT validation</div>
+        <div class="kpi-value" style="color:${nProsp===n?'#375623':'#C00000'}">${nProsp} / ${n}</div>
+        <div class="kpi-sub">${Math.round(nProsp/n*100)}%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tools with large drop ≥20 pts</div>
+        <div class="kpi-value" style="color:${nLarge===0?'#375623':'#C00000'}">${nLarge} / ${n}</div>
+        <div class="kpi-sub">Major generalisation concern</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tools with full cascade (all 5 steps)</div>
+        <div class="kpi-value" style="color:${nFull===n?'#375623':'#7B6000'}">${nFull} / ${n}</div>
+        <div class="kpi-sub">Avg depth: ${avgDepth} / 5</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="synth-box">
+    <div class="synth-title">Per-Tool Detail</div>
+    <table class="synth-table">
+      <thead><tr>
+        <th>Tool</th>
+        <th>Evidence depth</th>
+        <th>Steps available</th>
+        <th>Mean value</th>
+        <th>Max drop (at steps)</th>
+        <th>First→last trend</th>
+        <th>Retro. ext.</th>
+        <th>Prosp./RCT</th>
+        <th>Variability (SD)</th>
+        <th>Key concern</th>
+      </tr></thead>
+      <tbody>
+        ${stats.map(s => {
+          const barW = Math.round(s.depth/5*100);
+
+          const dropStr = s.maxDrop === null ? `<span class="fn">—</span>`
+            : s.maxDrop >= 20 ? `<span class="fc">▼ ${s.maxDrop.toFixed(1)} (${s.maxDropLabel})</span>`
+            : s.maxDrop >= 10 ? `<span class="fp">▼ ${s.maxDrop.toFixed(1)} (${s.maxDropLabel})</span>`
+            : s.maxDrop >= 3  ? `<span class="fo">▼ ${s.maxDrop.toFixed(1)} (${s.maxDropLabel})</span>`
+            : `<span class="fo">≤2 stable</span>`;
+
+          const trendStr = s.trend === null ? `<span class="fn">—</span>`
+            : s.trend < -20 ? `<span class="fc">▼ ${Math.abs(s.trend).toFixed(1)} large</span>`
+            : s.trend < -10 ? `<span class="fp">▼ ${Math.abs(s.trend).toFixed(1)} moderate</span>`
+            : s.trend < 0   ? `<span class="fo">▼ ${Math.abs(s.trend).toFixed(1)} minor</span>`
+            : s.trend === 0 ? `<span class="fo">= flat</span>`
+            : `<span class="fo">▲ ${s.trend.toFixed(1)} gain</span>`;
+
+          const sdStr = s.stdDev === null ? `<span class="fn">—</span>`
+            : s.stdDev > 15 ? `<span class="fc">${s.stdDev.toFixed(1)} high</span>`
+            : s.stdDev > 8  ? `<span class="fp">${s.stdDev.toFixed(1)} moderate</span>`
+            : `<span class="fo">${s.stdDev.toFixed(1)} low</span>`;
+
+          let concern = `<span class="fo">None identified</span>`;
+          if (s.depth === 0)
+            concern = `<span class="fc">No validation data</span>`;
+          else if (!s.hasRetro && !s.hasProsp)
+            concern = `<span class="fc">No external validation at all</span>`;
+          else if (s.maxDrop !== null && s.maxDrop >= 20)
+            concern = `<span class="fc">Large drop at ${s.maxDropLabel}</span>`;
+          else if (!s.hasProsp)
+            concern = `<span class="fp">No prospective/clinical validation</span>`;
+          else if (s.stdDev !== null && s.stdDev > 15)
+            concern = `<span class="fp">High variability across steps</span>`;
+
+          return `<tr>
+            <td style="font-weight:bold;color:${s.tool.color}">${s.tool.name||"Unnamed"}</td>
+            <td>
+              <div class="ev-bar"><div class="ev-fill" style="width:${barW}%;background:${DEPTH_COLORS[s.depth]}"></div></div>
+              <span style="font-size:11px;font-weight:bold;color:${DEPTH_COLORS[s.depth]}">${DEPTH_LABELS[s.depth]}</span>
+            </td>
+            <td>${s.available.length} / 5</td>
+            <td>${s.mean !== null ? s.mean.toFixed(1) : '<span class="fn">—</span>'}</td>
+            <td>${dropStr}</td>
+            <td>${trendStr}</td>
+            <td>${s.hasRetro?'<span class="fo">✓</span>':'<span class="fc">✗</span>'}</td>
+            <td>${s.hasProsp?'<span class="fo">✓</span>':'<span class="fc">✗</span>'}</td>
+            <td>${sdStr}</td>
+            <td>${concern}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="synth-box">
+    <div class="synth-title">Field-Level Narrative</div>
+    <div style="font-size:13px;line-height:1.8;color:#333">
+      <strong>Evidence base:</strong> ${n} tool${n!==1?'s':''} analysed.
+      ${nProsp} (${Math.round(nProsp/n*100)}%) had prospective or RCT-level validation — the highest standard of real-world evidence.
+      ${nRetro} (${Math.round(nRetro/n*100)}%) had retrospective external validation.
+      Average evidence depth: ${avgDepth}/5 steps.<br>
+      <strong>Performance stability:</strong>
+      ${nLarge} tool${nLarge!==1?'s':''} showed a large drop (≥20 points) across validation steps — indicating potential generalisation failures.
+      ${nLarge === 0 ? 'No large drops were identified.' : 'These tools warrant particular caution for real-world deployment.'}<br>
+      <strong>Gaps:</strong>
+      ${missingExt > 0 ? `${missingExt} tool${missingExt!==1?'s':''} lack retrospective external validation. ` : ''}
+      ${missingProsp > 0 ? `${missingProsp} tool${missingProsp!==1?'s':''} lack any prospective or clinical evidence — a critical gap for deployment readiness.` : 'All tools have prospective or clinical evidence.'}
+    </div>
+  </div>`;
+
+  container.innerHTML = html;
 }
 
 function exportChart() {
@@ -558,7 +675,28 @@ function exportChart() {
   a.click();
 }
 
-// ── START WITH TWO TOOLS ──
+function exportCSV() {
+  const rows = [["Tool","Step","Step Name","Conducted","Value","Metric","Notes"]];
+  tools.forEach(tool => {
+    STEPS.forEach((step, i) => {
+      const s = tool.steps[i];
+      rows.push([tool.name, step.num, step.label, s.conducted||"", s.value, s.metric, s.note]);
+    });
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.download = "validation_cascade.csv";
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.click();
+}
+
+function hexToRgba(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// Init
+updateSaveStatus();
 addTool();
 addTool();
 </script>
