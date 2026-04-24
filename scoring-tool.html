@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robustness & Transparency Scoring</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; font-size: 13px; }
+
+/* ── TABS ── */
+.top-bar { background: #1F4E79; color: white; padding: 14px 24px 0; }
+.top-bar h1 { font-size: 17px; margin-bottom: 10px; }
+.tabs { display: flex; gap: 4px; }
+.tab { padding: 7px 18px; border: none; border-radius: 6px 6px 0 0;
+  font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial; }
+.tab.rob  { background: #DEEAF1; color: #1F4E79; }
+.tab.tra  { background: #FDE9D9; color: #B8471A; }
+.tab.chart { background: #E2EFDA; color: #375623; }
+.tab.active { opacity: 1; }
+.tab:not(.active) { opacity: 0.6; }
+
+.panel { display: none; padding: 20px 24px; }
+.panel.active { display: block; }
+
+/* ── TOOL SELECTOR ── */
+.tool-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.tool-pill { padding: 5px 14px; border-radius: 20px; border: 2px solid transparent;
+  cursor: pointer; font-size: 12px; font-weight: bold; font-family: Arial; }
+.tool-pill.active { opacity: 1; }
+.tool-pill:not(.active) { opacity: 0.5; }
+.add-tool-btn { padding: 5px 14px; background: #1F4E79; color: white; border: none;
+  border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial; }
+.add-tool-btn:hover { background: #2E74B5; }
+.remove-tool-btn { padding: 5px 10px; background: #c00; color: white; border: none;
+  border-radius: 20px; font-size: 12px; cursor: pointer; font-family: Arial; }
+
+/* ── SCORING TABLE ── */
+.scoring-wrap { background: white; border-radius: 8px; border: 1px solid #dce3ec; overflow: hidden; }
+.dim-block { border-bottom: 2px solid #e8edf3; }
+.dim-block:last-child { border-bottom: none; }
+
+.dim-header { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; cursor: pointer; user-select: none; }
+.dim-header:hover { filter: brightness(0.97); }
+.dim-title { font-weight: bold; font-size: 13px; }
+.dim-desc { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.dim-score-badge { font-size: 13px; font-weight: bold; padding: 3px 12px;
+  border-radius: 12px; background: rgba(255,255,255,0.6); white-space: nowrap; margin-left: 12px; }
+.dim-toggle { font-size: 14px; margin-left: 8px; color: rgba(0,0,0,0.4); }
+
+.dim-questions { display: none; padding: 0 16px 12px; }
+.dim-questions.open { display: block; }
+
+.q-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid #f5f5f5; }
+.q-row:last-child { border-bottom: none; }
+.q-code { font-size: 10px; font-weight: bold; color: #888; width: 36px; flex-shrink: 0; padding-top: 2px; }
+.q-text { flex: 1; font-size: 12px; line-height: 1.5; }
+.q-toggle { display: flex; gap: 0; flex-shrink: 0; border-radius: 6px; overflow: hidden;
+  border: 1px solid #ddd; }
+.q-btn { padding: 4px 12px; border: none; cursor: pointer; font-size: 11px;
+  font-weight: bold; font-family: Arial; background: #f5f5f5; color: #999; }
+.q-btn.yes.active { background: #70AD47; color: white; }
+.q-btn.no.active  { background: #E74C3C; color: white; }
+.q-btn:hover:not(.active) { background: #eee; }
+
+/* ── SCORE SUMMARY BAR ── */
+.score-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.score-chip { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+
+/* ── CHARTS PANEL ── */
+.charts-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-box { background: white; border-radius: 8px; border: 1px solid #dce3ec; padding: 16px; }
+.chart-box h3 { font-size: 13px; margin-bottom: 10px; padding: 3px 10px;
+  border-radius: 4px; display: inline-block; }
+.rob-head { background: #DEEAF1; color: #1F4E79; }
+.tra-head { background: #FDE9D9; color: #B8471A; }
+
+.legend-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+.export-btn { margin-top: 8px; padding: 5px 12px; color: white; border: none;
+  border-radius: 4px; font-size: 11px; cursor: pointer; font-family: Arial; }
+.export-r { background: #1F4E79; }
+.export-t { background: #B8471A; }
+
+/* ── COMPARISON TABLE ── */
+.compare-box { background: white; border-radius: 8px; border: 1px solid #dce3ec; padding: 16px; }
+.compare-box h3 { font-size: 13px; font-weight: bold; color: #1F4E79; margin-bottom: 10px; }
+table.ctab { width: 100%; border-collapse: collapse; font-size: 11px; }
+table.ctab th { padding: 6px 8px; text-align: center; }
+table.ctab th.rh { background: #1F4E79; color: white; }
+table.ctab th.th { background: #B8471A; color: white; }
+table.ctab th.gh { background: #444; color: white; text-align: left; }
+table.ctab td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+table.ctab td.name-cell { text-align: left; font-weight: bold; }
+table.ctab tr:hover td { background: #fafafa; }
+
+.score-bar-wrap { width: 50px; height: 7px; background: #eee; border-radius: 4px;
+  display: inline-block; vertical-align: middle; margin-right: 4px; }
+.score-bar { height: 100%; border-radius: 4px; }
+
+@media (max-width: 800px) {
+  .charts-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>Robustness &amp; Transparency Scoring Tool</h1>
+  <div class="tabs">
+    <button class="tab rob active" onclick="switchTab('rob')">🔵 Robustness</button>
+    <button class="tab tra" onclick="switchTab('tra')">🟠 Transparency</button>
+    <button class="tab chart" onclick="switchTab('chart')">📊 Radar Charts</button>
+  </div>
+</div>
+
+<div id="panel-rob" class="panel active"></div>
+<div id="panel-tra" class="panel"></div>
+<div id="panel-chart" class="panel">
+  <div class="charts-layout">
+    <div class="chart-box">
+      <h3 class="rob-head">Robustness Profile</h3>
+      <canvas id="robChart" height="340"></canvas>
+      <div class="legend-row" id="rob-legend"></div>
+      <button class="export-btn export-r" onclick="exportChart('robChart','robustness_profile')">Export PNG</button>
+    </div>
+    <div class="chart-box">
+      <h3 class="tra-head">Transparency Profile</h3>
+      <canvas id="traChart" height="340"></canvas>
+      <div class="legend-row" id="tra-legend"></div>
+      <button class="export-btn export-t" onclick="exportChart('traChart','transparency_profile')">Export PNG</button>
+    </div>
+  </div>
+  <div class="compare-box">
+    <h3>Score Comparison Table</h3>
+    <div id="compare-table-container"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DIMENSION & QUESTION DEFINITIONS
+// ─────────────────────────────────────────────
+
+const ROB_DIMS = [
+  {
+    id: "r1", code: "R1", label: "Training Data Quality",
+    desc: "Was the data the model learned from clean, well-processed, and trustworthy?",
+    color: "#4472C4", light: "#DEEAF1",
+    questions: [
+      { id: "r1_1", text: "Was there a description of data cleaning steps?" },
+      { id: "r1_2", text: "Was the handling of missing values described?" },
+      { id: "r1_3", text: "Was the handling of data imputation or transformation described?" },
+      { id: "r1_4", text: "Were any other data quality checking or preprocessing steps described?" },
+      { id: "r1_5", text: "Was the AI system performance assessed with synthetic data?" },
+      { id: "r1_6", text: "Was ground truth establishment described?" },
+    ]
+  },
+  {
+    id: "r2", code: "R2", label: "Training Data Representativeness",
+    desc: "Does the training data reflect the intended population and real-world context?",
+    color: "#70AD47", light: "#E2EFDA",
+    questions: [
+      { id: "r2_1", text: "Was the dataset origin described?" },
+      { id: "r2_2", text: "Was the timeframe of data collection reported?" },
+      { id: "r2_3", text: "Was the location/setting of data collection reported?" },
+      { id: "r2_4", text: "Was the total number of individuals in the training dataset reported?" },
+      { id: "r2_5", text: "Were demographic characteristics of the training dataset reported? (sex, age, race/ethnicity, etc.)" },
+    ]
+  },
+  {
+    id: "r3", code: "R3", label: "Model Development Rigour",
+    desc: "Was the training and optimisation process methodologically sound?",
+    color: "#FFC000", light: "#FFF2CC",
+    questions: [
+      { id: "r3_1", text: "Was the method of data splitting described?" },
+      { id: "r3_2", text: "Was the method of resampling described? (e.g. cross-validation)" },
+      { id: "r3_3", text: "Was the optimisation method described?" },
+      { id: "r3_4", text: "Was hyperparameter optimisation performed?" },
+    ]
+  },
+  {
+    id: "r4", code: "R4", label: "Validation Rigour",
+    desc: "How thoroughly was the model tested — internally and externally?",
+    color: "#FF4B00", light: "#FCE4D6",
+    questions: [
+      { id: "r4_1", text: "Were performance metrics for internal validation reported?" },
+      { id: "r4_2", text: "Was there a rationale/justification for the selected metrics?" },
+      { id: "r4_3", text: "Are internal validation results specified with confidence intervals?" },
+      { id: "r4_4", text: "Was external validation conducted? (prospective or retrospective)" },
+      { id: "r4_5", text: "Was the external validation dataset origin described?" },
+      { id: "r4_6", text: "Were demographic characteristics of the external validation dataset reported?" },
+      { id: "r4_7", text: "Was data cleaning/preprocessing of the external validation dataset described?" },
+      { id: "r4_8", text: "Were performance metrics for external validation reported?" },
+      { id: "r4_9", text: "Are external validation results specified with confidence intervals?" },
+    ]
+  },
+  {
+    id: "r5", code: "R5", label: "Subgroup & Fairness Testing",
+    desc: "Was the tool actively tested to check it works equally across groups?",
+    color: "#CC0066", light: "#EAD1DC",
+    questions: [
+      { id: "r5_1", text: "Was performance tested across different sexes?" },
+      { id: "r5_2", text: "Was performance tested across different race/ethnicities?" },
+      { id: "r5_3", text: "Was performance tested across different age groups?" },
+      { id: "r5_4", text: "Was performance tested across different clinical groups?" },
+      { id: "r5_5", text: "Was intersectionality (combined group membership) considered?" },
+      { id: "r5_6", text: "Were similarities/differences between study and training data described?" },
+      { id: "r5_7", text: "Was a formal fairness assessment reported?" },
+      { id: "r5_8", text: "Were prediction errors analysed to identify vulnerable subgroups?" },
+    ]
+  },
+  {
+    id: "r6", code: "R6", label: "Deployment & Operational Stability",
+    desc: "Does the tool hold up under real-world variation in how and where it is used?",
+    color: "#7030A0", light: "#D9D2E9",
+    questions: [
+      { id: "r6_1", text: "Does the AI system address the need for a decision threshold?" },
+      { id: "r6_2", text: "Were uncertainty scores about the prediction displayed on the UX?" },
+      { id: "r6_3", text: "Was a function allocation / escalation channel to humans in place?" },
+      { id: "r6_4", text: "Is the system able to detect varying environments and adapt its behaviour?" },
+      { id: "r6_5", text: "Was performance tested across different timespans?" },
+      { id: "r6_6", text: "Was performance tested across different locations?" },
+      { id: "r6_7", text: "Was performance tested across different settings?" },
+      { id: "r6_8", text: "Was performance tested across different levels of tool autonomy?" },
+      { id: "r6_9", text: "Was performance tested across different devices?" },
+    ]
+  },
+  {
+    id: "r7", code: "R7", label: "Stress-Testing & Sensitivity",
+    desc: "Were the model's assumptions and limits actively probed?",
+    color: "#C00000", light: "#F4CCCC",
+    questions: [
+      { id: "r7_1", text: "Were different training strategies investigated?" },
+      { id: "r7_2", text: "Was the effect of different hyperparameter choices on performance investigated?" },
+      { id: "r7_3", text: "Was the effect of data missingness on performance investigated?" },
+      { id: "r7_4", text: "Was the effect of data balancing on performance investigated?" },
+    ]
+  },
+  {
+    id: "r8", code: "R8", label: "Construct Validity",
+    desc: "Does the tool actually measure what it claims to — is it theoretically grounded?",
+    color: "#00897B", light: "#E0F2F1",
+    questions: [
+      { id: "r8_1", text: "Is the model based on a recognised psychological/medical theoretical framework?" },
+      { id: "r8_2", text: "Do the authors claim (with evidence) that the features are appropriate for predicting the condition?" },
+      { id: "r8_3", text: "Do the authors claim (with evidence) that the prediction target captures the condition?" },
+      { id: "r8_4", text: "Do the authors claim (with evidence) that the model captures the feature-target relationship?" },
+      { id: "r8_5", text: "Was there external scientific research supporting the tool's logic?" },
+      { id: "r8_6", text: "Was an explainability technique applied?" },
+      { id: "r8_7", text: "Were explainability results used to support construct validity claims?" },
+    ]
+  },
+];
+
+const TRA_DIMS = [
+  {
+    id: "t1", code: "T1", label: "Tool Description",
+    desc: "Was the tool clearly and fully described?",
+    color: "#E8703A", light: "#FDE9D9",
+    questions: [
+      { id: "t1_1", text: "Was the name of the AI system reported?" },
+      { id: "t1_2", text: "Was the version of the AI system reported?" },
+      { id: "t1_3", text: "Was the type of algorithm or base model described?" },
+      { id: "t1_4", text: "Was the rationale for the choice of algorithm reported?" },
+      { id: "t1_5", text: "Was the model architecture described?" },
+      { id: "t1_6", text: "Was the input modality (type of input data) described?" },
+      { id: "t1_7", text: "Was the output modality (type of output) described?" },
+      { id: "t1_8", text: "Was any certification of the AI system reported? (FDA, CE, etc.)" },
+    ]
+  },
+  {
+    id: "t2", code: "T2", label: "Intended Use Reporting",
+    desc: "Was the intended scope of use clearly defined and reported?",
+    color: "#3498DB", light: "#EBF3FB",
+    questions: [
+      { id: "t2_1", text: "Was the intended use of the tool described?" },
+      { id: "t2_2", text: "Was the intended target population described?" },
+      { id: "t2_3", text: "Was the intended clinical setting/context described?" },
+      { id: "t2_4", text: "Were intended end users described?" },
+      { id: "t2_5", text: "Was the intended level of autonomy described?" },
+      { id: "t2_6", text: "Were any restrictions on applicability reported?" },
+    ]
+  },
+  {
+    id: "t3", code: "T3", label: "Training Data Reporting",
+    desc: "Was the training data transparently described?",
+    color: "#27AE60", light: "#E2EFDA",
+    questions: [
+      { id: "t3_1", text: "Was the dataset origin described?" },
+      { id: "t3_2", text: "Was the timeframe of data collection reported?" },
+      { id: "t3_3", text: "Was the location/setting of data collection reported?" },
+      { id: "t3_4", text: "Was the total number of individuals in the training dataset reported?" },
+      { id: "t3_5", text: "Were demographic characteristics of the training dataset reported?" },
+      { id: "t3_6", text: "Was ground truth establishment described?" },
+    ]
+  },
+  {
+    id: "t4", code: "T4", label: "Data Processing Reporting",
+    desc: "Was data handling described transparently?",
+    color: "#F39C12", light: "#FEF9E7",
+    questions: [
+      { id: "t4_1", text: "Was there a description of data cleaning steps?" },
+      { id: "t4_2", text: "Was the handling of missing values described?" },
+      { id: "t4_3", text: "Was the handling of data imputation or transformation described?" },
+      { id: "t4_4", text: "Were other data quality checking or preprocessing steps described?" },
+    ]
+  },
+  {
+    id: "t5", code: "T5", label: "Validation & Results Reporting",
+    desc: "Were validation methods and results fully and transparently reported?",
+    color: "#E74C3C", light: "#FDEDEC",
+    questions: [
+      { id: "t5_1", text: "Were performance metrics for internal validation reported?" },
+      { id: "t5_2", text: "Was a rationale for the selected metrics provided?" },
+      { id: "t5_3", text: "Were internal validation results reported with confidence intervals?" },
+      { id: "t5_4", text: "Was external validation conducted and reported?" },
+      { id: "t5_5", text: "Were external validation results reported with confidence intervals?" },
+      { id: "t5_6", text: "Was a rationale for the overall testing strategy provided?" },
+      { id: "t5_7", text: "Were RCT outcome results reported with confidence intervals?" },
+    ]
+  },
+  {
+    id: "t6", code: "T6", label: "Study Conduct Reporting",
+    desc: "Was the RCT transparently conducted and reported?",
+    color: "#8E44AD", light: "#F4ECF7",
+    questions: [
+      { id: "t6_1", text: "Was a sample size calculation reported?" },
+      { id: "t6_2", text: "Were inclusion and exclusion criteria reported?" },
+      { id: "t6_3", text: "Was blinding of outcome assessment reported?" },
+      { id: "t6_4", text: "Were assessors' qualifications described?" },
+      { id: "t6_5", text: "Were measures taken to prevent bias in outcome assessment described?" },
+      { id: "t6_6", text: "Was human judgement involvement in outcomes acknowledged?" },
+      { id: "t6_7", text: "Was the method of participant recruitment described?" },
+    ]
+  },
+  {
+    id: "t7", code: "T7", label: "COI & Limitations",
+    desc: "Was the full picture — including limitations and conflicts — disclosed?",
+    color: "#16A085", light: "#E8F8F5",
+    questions: [
+      { id: "t7_1", text: "Were sources of funding reported?" },
+      { id: "t7_2", text: "Were authors' financial relationships / conflicts of interest reported?" },
+      { id: "t7_3", text: "Were study limitations reported in the Discussion?" },
+      { id: "t7_4", text: "Were performance limitations reported? (bias, generalisability, etc.)" },
+      { id: "t7_5", text: "Were possible risks of harms of the AI system reported?" },
+      { id: "t7_6", text: "Were adverse events recorded or analysed?" },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+const TOOL_COLORS = [
+  "#1F4E79","#C00000","#375623","#7B3F00","#4B0082",
+  "#00695C","#BF360C","#1A237E","#880E4F","#0D47A1"
+];
+
+let tools = [];
+let activeToolId = null;
+let robChart = null, traChart = null;
+let toolCounter = 0;
+
+function addTool() {
+  const id = "tool" + (++toolCounter);
+  const color = TOOL_COLORS[(toolCounter - 1) % TOOL_COLORS.length];
+  const answers = {};
+  [...ROB_DIMS, ...TRA_DIMS].forEach(dim => {
+    dim.questions.forEach(q => { answers[q.id] = null; });
+  });
+  tools.push({ id, name: "Tool " + toolCounter, color, answers });
+  activeToolId = id;
+  renderAll();
+}
+
+function removeTool(id) {
+  tools = tools.filter(t => t.id !== id);
+  if (activeToolId === id) activeToolId = tools.length ? tools[0].id : null;
+  renderAll();
+}
+
+function setAnswer(toolId, qId, val) {
+  const tool = tools.find(t => t.id === toolId);
+  if (!tool) return;
+  tool.answers[qId] = tool.answers[qId] === val ? null : val; // toggle off
+  renderScoringPanel("rob");
+  renderScoringPanel("tra");
+  updateCharts();
+}
+
+function getDimScore(tool, dim) {
+  const qs = dim.questions;
+  const answered = qs.filter(q => tool.answers[q.id] !== null);
+  if (answered.length === 0) return null;
+  const yes = qs.filter(q => tool.answers[q.id] === true).length;
+  return Math.round((yes / qs.length) * 100);
+}
+
+function getActiveTool() { return tools.find(t => t.id === activeToolId); }
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function renderAll() {
+  renderToolBar("rob");
+  renderToolBar("tra");
+  renderScoringPanel("rob");
+  renderScoringPanel("tra");
+  updateCharts();
+}
+
+function renderToolBar(type) {
+  const panel = document.getElementById("panel-" + type);
+  let bar = panel.querySelector(".tool-bar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.className = "tool-bar";
+    panel.insertBefore(bar, panel.firstChild);
+  }
+  bar.innerHTML = tools.map(t => `
+    <div class="tool-pill ${t.id === activeToolId ? 'active' : ''}"
+      style="background:${t.id === activeToolId ? t.color : '#eee'};
+             color:${t.id === activeToolId ? 'white' : '#555'};
+             border-color:${t.color}"
+      onclick="setActiveTool('${t.id}')">
+      ${t.name}
+    </div>`).join("") +
+    `<input type="text" id="tool-name-inp-${type}" placeholder="Tool name"
+      style="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px;font-family:Arial;width:140px"
+      value="${getActiveTool() ? getActiveTool().name : ''}"
+      oninput="renameActiveTool(this.value,'${type}')" />
+    <button class="add-tool-btn" onclick="addTool()">+ Add Tool</button>
+    ${getActiveTool() ? `<button class="remove-tool-btn" onclick="removeTool('${activeToolId}')">Remove</button>` : ''}`;
+}
+
+function setActiveTool(id) {
+  activeToolId = id;
+  renderAll();
+}
+
+function renameActiveTool(name, type) {
+  const t = getActiveTool();
+  if (t) { t.name = name; updateCharts(); renderToolBar(type === "rob" ? "tra" : "rob"); }
+}
+
+function renderScoringPanel(type) {
+  const dims = type === "rob" ? ROB_DIMS : TRA_DIMS;
+  const panel = document.getElementById("panel-" + type);
+
+  // Remove old scoring wrap
+  const old = panel.querySelector(".scoring-wrap");
+  if (old) old.remove();
+  const oldSummary = panel.querySelector(".score-summary");
+  if (oldSummary) oldSummary.remove();
+
+  if (!getActiveTool()) {
+    const msg = document.createElement("p");
+    msg.style.cssText = "color:#aaa;font-style:italic;padding:20px";
+    msg.textContent = "Add a tool above to start scoring.";
+    panel.appendChild(msg);
+    return;
+  }
+
+  const tool = getActiveTool();
+
+  // Score summary
+  const summary = document.createElement("div");
+  summary.className = "score-summary";
+  dims.forEach(dim => {
+    const score = getDimScore(tool, dim);
+    const chip = document.createElement("span");
+    chip.className = "score-chip";
+    chip.style.cssText = `background:${dim.light};color:${dim.color};border:1px solid ${dim.color}`;
+    chip.textContent = `${dim.code}: ${score !== null ? score + "%" : "—"}`;
+    summary.appendChild(chip);
+  });
+  panel.appendChild(summary);
+
+  // Scoring table
+  const wrap = document.createElement("div");
+  wrap.className = "scoring-wrap";
+
+  dims.forEach(dim => {
+    const score = getDimScore(tool, dim);
+    const yesCount = dim.questions.filter(q => tool.answers[q.id] === true).length;
+    const total = dim.questions.length;
+
+    const block = document.createElement("div");
+    block.className = "dim-block";
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "dim-header";
+    header.style.background = dim.light;
+    header.innerHTML = `
+      <div>
+        <div class="dim-title" style="color:${dim.color}">${dim.code} — ${dim.label}</div>
+        <div class="dim-desc">${dim.desc}</div>
+      </div>
+      <div style="display:flex;align-items:center">
+        <span class="dim-score-badge" style="color:${dim.color}">
+          ${yesCount}/${total} = ${score !== null ? score + "%" : "—"}
+        </span>
+        <span class="dim-toggle">▾</span>
+      </div>`;
+
+    const qContainer = document.createElement("div");
+    qContainer.className = "dim-questions";
+
+    dim.questions.forEach(q => {
+      const row = document.createElement("div");
+      row.className = "q-row";
+      const ans = tool.answers[q.id];
+      row.innerHTML = `
+        <span class="q-code">${q.id.toUpperCase()}</span>
+        <span class="q-text">${q.text}</span>
+        <div class="q-toggle">
+          <button class="q-btn yes ${ans === true ? 'active' : ''}"
+            onclick="setAnswer('${tool.id}','${q.id}',true)">Yes</button>
+          <button class="q-btn no ${ans === false ? 'active' : ''}"
+            onclick="setAnswer('${tool.id}','${q.id}',false)">No</button>
+        </div>`;
+      qContainer.appendChild(row);
+    });
+
+    header.onclick = () => {
+      qContainer.classList.toggle("open");
+      header.querySelector(".dim-toggle").textContent =
+        qContainer.classList.contains("open") ? "▴" : "▾";
+    };
+
+    block.appendChild(header);
+    block.appendChild(qContainer);
+    wrap.appendChild(block);
+  });
+
+  panel.appendChild(wrap);
+}
+
+// ─────────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────────
+function buildDatasets(dims) {
+  return tools.map(tool => ({
+    label: tool.name || "Unnamed",
+    data: dims.map(d => getDimScore(tool, d)),
+    backgroundColor: hexToRgba(tool.color, 0.12),
+    borderColor: tool.color,
+    borderWidth: 2.5,
+    pointBackgroundColor: tool.color,
+    pointRadius: 5,
+    spanGaps: false,
+  }));
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16),
+        g = parseInt(hex.slice(3,5),16),
+        b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function radarOpts(labelColor) {
+  return {
+    responsive: true,
+    scales: { r: {
+      min: 0, max: 100,
+      ticks: { stepSize: 25, font: { size: 10 }, color: "#999" },
+      pointLabels: { font: { size: 11, weight: "bold" }, color: labelColor },
+      grid: { color: "rgba(0,0,0,0.07)" },
+      angleLines: { color: "rgba(0,0,0,0.1)" },
+    }},
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: {
+        label: ctx => `${ctx.dataset.label}: ${ctx.raw != null ? ctx.raw+"%" : "N/A"}`
+      }}
+    }
+  };
+}
+
+function updateCharts() {
+  const robLabels = ROB_DIMS.map(d => d.code);
+  const traLabels = TRA_DIMS.map(d => d.code);
+
+  if (!robChart) {
+    robChart = new Chart(document.getElementById("robChart").getContext("2d"), {
+      type: "radar",
+      data: { labels: robLabels, datasets: buildDatasets(ROB_DIMS) },
+      options: radarOpts("#1F4E79")
+    });
+  } else {
+    robChart.data.datasets = buildDatasets(ROB_DIMS);
+    robChart.update();
+  }
+
+  if (!traChart) {
+    traChart = new Chart(document.getElementById("traChart").getContext("2d"), {
+      type: "radar",
+      data: { labels: traLabels, datasets: buildDatasets(TRA_DIMS) },
+      options: radarOpts("#B8471A")
+    });
+  } else {
+    traChart.data.datasets = buildDatasets(TRA_DIMS);
+    traChart.update();
+  }
+
+  // Legends
+  ["rob","tra"].forEach(type => {
+    document.getElementById(type + "-legend").innerHTML = tools.map(t => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${t.color}"></div>
+        <span>${t.name || "Unnamed"}</span>
+      </div>`).join("");
+  });
+
+  // Comparison table
+  const allDims = [...ROB_DIMS, ...TRA_DIMS];
+  let html = `<table class="ctab"><thead><tr>
+    <th class="gh">Tool</th>
+    ${ROB_DIMS.map(d => `<th class="rh">${d.code}</th>`).join("")}
+    ${TRA_DIMS.map(d => `<th class="th">${d.code}</th>`).join("")}
+  </tr></thead><tbody>`;
+
+  tools.forEach(t => {
+    html += `<tr><td class="name-cell" style="color:${t.color}">${t.name}</td>`;
+    allDims.forEach(dim => {
+      const s = getDimScore(t, dim);
+      const isRob = dim.id.startsWith("r");
+      const barColor = isRob ? "#4472C4" : "#E8703A";
+      html += `<td>${s !== null
+        ? `<div class="score-bar-wrap"><div class="score-bar" style="width:${s}%;background:${barColor}"></div></div>${s}%`
+        : "—"}</td>`;
+    });
+    html += "</tr>";
+  });
+
+  html += "</tbody></table>";
+  document.getElementById("compare-table-container").innerHTML = html;
+}
+
+function exportChart(canvasId, filename) {
+  const a = document.createElement("a");
+  a.download = filename + ".png";
+  a.href = document.getElementById(canvasId).toDataURL("image/png");
+  a.click();
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("panel-" + name).classList.add("active");
+  document.querySelector(`.tab.${name}`).classList.add("active");
+  if (name === "chart") updateCharts();
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+addTool();
+</script>
+</body>
+</html>
