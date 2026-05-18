@@ -3,89 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Robustness & Transparency Scoring</title>
+<title>Robustness Scoring Tool</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Arial,sans-serif;background:#f0f3f7;color:#222;font-size:13px;}
 .top-bar{background:#1F4E79;color:white;padding:14px 24px 0;}
-.top-bar h1{font-size:17px;margin-bottom:10px;}
+.top-bar h1{font-size:18px;margin-bottom:3px;}
+.top-bar p{font-size:11px;opacity:.75;margin-bottom:10px;}
 .tabs{display:flex;gap:4px;}
-.tab{padding:7px 18px;border:none;border-radius:6px 6px 0 0;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial;opacity:0.6;}
+.tab{padding:7px 18px;border:none;border-radius:6px 6px 0 0;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial;opacity:.6;}
 .tab.active{opacity:1;}
 .tab.imp{background:#E8F8F5;color:#00695C;}
-.tab.rob{background:#DEEAF1;color:#1F4E79;}
-.tab.tra{background:#FDE9D9;color:#B8471A;}
+.tab.score{background:#DEEAF1;color:#1F4E79;}
 .tab.chart{background:#E2EFDA;color:#375623;}
 .panel{display:none;padding:20px 24px;}
 .panel.active{display:block;}
+/* tool bar */
 .tool-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
 .tool-pill{padding:5px 14px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-size:12px;font-weight:bold;font-family:Arial;}
-.tool-pill:not(.active){opacity:0.45;}
-.add-tool-btn{padding:5px 14px;background:#1F4E79;color:white;border:none;border-radius:20px;font-size:12px;font-weight:bold;cursor:pointer;}
-.remove-tool-btn{padding:5px 10px;background:#c00;color:white;border:none;border-radius:20px;font-size:11px;cursor:pointer;}
+.tool-pill:not(.active){opacity:.4;}
+.add-btn{padding:5px 14px;background:#1F4E79;color:white;border:none;border-radius:20px;font-size:12px;font-weight:bold;cursor:pointer;}
+.del-btn{padding:5px 10px;background:#c00;color:white;border:none;border-radius:20px;font-size:11px;cursor:pointer;}
+/* scoring */
 .scoring-wrap{background:white;border-radius:8px;border:1px solid #dce3ec;}
 .dim-block{border-bottom:2px solid #e8edf3;}
 .dim-block:last-child{border-bottom:none;}
 .dim-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none;}
 .dim-title{font-weight:bold;font-size:13px;}
-.dim-desc{font-size:11px;opacity:0.7;margin-top:2px;}
-.dim-badge{font-size:13px;font-weight:bold;padding:3px 12px;border-radius:12px;background:rgba(255,255,255,0.6);white-space:nowrap;margin-left:10px;}
+.dim-meta{font-size:11px;opacity:.7;margin-top:2px;}
+.dim-badge{font-size:14px;font-weight:bold;padding:4px 14px;border-radius:12px;background:rgba(255,255,255,.65);white-space:nowrap;margin-left:10px;}
 .dim-qs{display:none;padding:0 16px 12px;}
 .dim-qs.open{display:block;}
-.q-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #f5f5f5;}
+.cap-notice{background:#FFF3CD;border:1px solid #FFD700;border-radius:6px;padding:8px 12px;font-size:11px;color:#856404;margin-bottom:8px;}
+.q-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;}
 .q-row:last-child{border-bottom:none;}
-.q-code{font-size:10px;font-weight:bold;color:#888;width:36px;flex-shrink:0;padding-top:2px;}
+.q-row.gate{background:#FFF8E1;border-radius:4px;padding:8px;}
+.q-pts{font-size:10px;font-weight:bold;width:34px;flex-shrink:0;padding-top:3px;text-align:right;color:#888;}
 .q-text{flex:1;font-size:12px;line-height:1.5;}
-.q-toggle{display:flex;flex-shrink:0;border-radius:6px;overflow:hidden;border:1px solid #ddd;}
-.q-btn{padding:4px 12px;border:none;cursor:pointer;font-size:11px;font-weight:bold;font-family:Arial;background:#f5f5f5;color:#999;}
-.q-btn.yes.active{background:#70AD47;color:white;}
-.q-btn.no.active{background:#E74C3C;color:white;}
-.q-btn:hover:not(.active){background:#eee;}
-.score-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.score-chip{padding:4px 12px;border-radius:12px;font-size:11px;font-weight:bold;}
-.charts-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-.chart-box{background:white;border-radius:8px;border:1px solid #dce3ec;padding:16px;}
-.chart-box h3{font-size:13px;margin-bottom:10px;padding:3px 10px;border-radius:4px;display:inline-block;}
-.rob-h{background:#DEEAF1;color:#1F4E79;}
-.tra-h{background:#FDE9D9;color:#B8471A;}
-.legend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;}
-.legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
-.export-btn{margin-top:8px;padding:5px 12px;color:white;border:none;border-radius:4px;font-size:11px;cursor:pointer;}
-.exp-r{background:#1F4E79;}.exp-t{background:#B8471A;}
-.compare-box{background:white;border-radius:8px;border:1px solid #dce3ec;padding:16px;}
-.compare-box h3{font-size:13px;font-weight:bold;color:#1F4E79;margin-bottom:10px;}
+.q-ref{font-size:10px;color:#bbb;margin-top:1px;}
+.q-ctrl{flex-shrink:0;}
+/* binary */
+.q-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid #ddd;}
+.q-btn{padding:4px 11px;border:none;cursor:pointer;font-size:11px;font-weight:bold;font-family:Arial;background:#f5f5f5;color:#999;}
+.q-btn.yes.on{background:#70AD47;color:white;}
+.q-btn.no.on{background:#E74C3C;color:white;}
+.q-btn:hover:not(.on){background:#eee;}
+/* graded */
+.q-graded{display:flex;border-radius:6px;overflow:hidden;border:1px solid #ddd;}
+.q-grade{padding:4px 11px;border:none;cursor:pointer;font-size:11px;font-weight:bold;font-family:Arial;background:#f5f5f5;color:#999;}
+.q-grade.on0{background:#E74C3C;color:white;}
+.q-grade.on1{background:#FFC107;color:#333;}
+.q-grade.on2{background:#70AD47;color:white;}
+.q-grade:hover:not(.on0):not(.on1):not(.on2){background:#eee;}
+/* chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{padding:4px 11px;border-radius:12px;font-size:11px;font-weight:bold;}
+/* chart panel */
+.chart-box{background:white;border-radius:8px;border:1px solid #dce3ec;padding:20px;margin-bottom:16px;}
+.chart-title{font-size:14px;font-weight:bold;color:#1F4E79;margin-bottom:12px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.exp-btn{margin-top:10px;padding:6px 14px;background:#1F4E79;color:white;border:none;border-radius:4px;font-size:11px;cursor:pointer;}
+.cmp{background:white;border-radius:8px;border:1px solid #dce3ec;padding:16px;}
+.cmp h3{font-size:13px;font-weight:bold;color:#1F4E79;margin-bottom:10px;}
 table.ct{width:100%;border-collapse:collapse;font-size:11px;}
-table.ct th{padding:6px 8px;text-align:center;}
-table.ct th.rh{background:#1F4E79;color:white;}
-table.ct th.th{background:#B8471A;color:white;}
-table.ct th.gh{background:#444;color:white;text-align:left;}
+table.ct th{padding:6px 8px;text-align:center;background:#1F4E79;color:white;}
+table.ct th:first-child{text-align:left;}
 table.ct td{padding:5px 8px;border-bottom:1px solid #f0f0f0;text-align:center;}
-table.ct td.nc{text-align:left;font-weight:bold;}
-.bar-w{width:50px;height:7px;background:#eee;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:4px;}
-.bar-f{height:100%;border-radius:4px;}
+table.ct td:first-child{text-align:left;font-weight:bold;}
+.bw{width:55px;height:7px;background:#eee;border-radius:4px;display:inline-block;vertical-align:middle;margin-right:4px;}
+.bf{height:100%;border-radius:4px;background:#4472C4;}
+/* import */
 .imp-wrap{max-width:680px;}
-.drop-zone{border:2px dashed #00897B;border-radius:8px;padding:32px;text-align:center;background:#E8F8F5;cursor:pointer;margin-bottom:12px;transition:background 0.15s;}
-.drop-zone:hover{background:#B2DFDB;}
-.imp-status{display:none;background:white;border-radius:8px;border:1px solid #dce3ec;padding:12px;margin-bottom:12px;font-size:12px;}
-.imp-preview{display:none;}
-.sheet-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7f9fc;border-radius:6px;border:1px solid #dce3ec;margin-bottom:6px;}
+.drop{border:2px dashed #00897B;border-radius:8px;padding:32px;text-align:center;background:#E8F8F5;cursor:pointer;margin-bottom:12px;transition:background .15s;}
+.drop:hover,.drop.over{background:#B2DFDB;}
+.imp-st{display:none;background:white;border-radius:8px;border:1px solid #dce3ec;padding:12px;margin-bottom:12px;font-size:12px;}
+.imp-pre{display:none;}
+.sh-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7f9fc;border-radius:6px;border:1px solid #dce3ec;margin-bottom:6px;}
 .imp-btn{padding:9px 24px;background:#00897B;color:white;border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;}
-.imp-cancel{padding:9px 16px;background:#eee;color:#555;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-left:8px;}
-@media(max-width:800px){.charts-layout{grid-template-columns:1fr;}}
+.imp-cl{padding:9px 16px;background:#eee;color:#555;border:none;border-radius:6px;font-size:13px;cursor:pointer;margin-left:8px;}
 </style>
 </head>
 <body>
-
 <div class="top-bar">
-  <h1>Robustness &amp; Transparency Scoring Tool</h1>
+  <h1>Robustness Scoring Tool</h1>
+  <p>10 dimensions &middot; Weighted questions &middot; Gated scoring for validation &middot; 0&ndash;10 per dimension</p>
   <div class="tabs">
-    <button class="tab imp active" onclick="switchTab('imp')">📥 Import Excel</button>
-    <button class="tab rob" onclick="switchTab('rob')">🔵 Robustness</button>
-    <button class="tab tra" onclick="switchTab('tra')">🟠 Transparency</button>
-    <button class="tab chart" onclick="switchTab('chart')">📊 Radar Charts</button>
+    <button class="tab imp active" onclick="go('imp')">&#128229; Import Excel</button>
+    <button class="tab score" onclick="go('score')">&#128203; Score</button>
+    <button class="tab chart" onclick="go('chart')">&#128202; Radar Chart</button>
   </div>
 </div>
 
@@ -93,417 +102,534 @@ table.ct td.nc{text-align:left;font-weight:bold;}
   <div class="imp-wrap">
     <h2 style="color:#00695C;font-size:15px;margin-bottom:8px">Import from Excel</h2>
     <p style="font-size:12px;color:#555;margin-bottom:14px;line-height:1.6">
-      Upload your <strong>.xlsx file</strong> with one sheet per tool, using the standard codebook format
-      (column A = field name, column B = extracted value).
-      A filled cell = <strong style="color:#70AD47">Yes</strong>,
-      empty or "None" = <strong style="color:#E74C3C">No</strong>.
-      Each sheet becomes one tool automatically.
+      Upload your <strong>.xlsx</strong> &mdash; one sheet per tool, codebook format
+      (col&nbsp;A&nbsp;=&nbsp;field&nbsp;name, col&nbsp;B&nbsp;=&nbsp;value).
+      Filled cell = <strong style="color:#70AD47">Yes</strong>,
+      empty or &ldquo;None&rdquo; = <strong style="color:#E74C3C">No</strong>.
+      Graded questions (0/1/2) import as 1 by default &mdash; adjust in Score tab.
     </p>
-    <div class="drop-zone"
-      onclick="document.getElementById('xl-input').click()"
-      ondragover="event.preventDefault()"
-      ondrop="event.preventDefault();handleFile(event.dataTransfer.files[0])">
-      <div style="font-size:36px;margin-bottom:8px">📂</div>
+    <div class="drop" id="drop"
+      onclick="document.getElementById('fi').click()"
+      ondragover="event.preventDefault();this.classList.add('over')"
+      ondragleave="this.classList.remove('over')"
+      ondrop="event.preventDefault();this.classList.remove('over');handleFile(event.dataTransfer.files[0])">
+      <div style="font-size:36px;margin-bottom:8px">&#128193;</div>
       <div style="font-weight:bold;color:#00695C;font-size:14px">Click to upload or drag &amp; drop</div>
-      <div style="color:#777;font-size:11px;margin-top:4px">.xlsx — one tool per sheet</div>
+      <div style="color:#777;font-size:11px;margin-top:4px">.xlsx &middot; one tool per sheet</div>
     </div>
-    <input type="file" id="xl-input" accept=".xlsx" style="display:none" onchange="handleFile(this.files[0])">
-    <div class="imp-status" id="imp-status"></div>
-    <div class="imp-preview" id="imp-preview">
-      <p style="font-size:12px;font-weight:bold;color:#1F4E79;margin-bottom:8px">Sheets found — rename if needed:</p>
-      <div id="sheet-list"></div>
-      <button class="imp-btn" onclick="applyImport()">✓ Import all as tools</button>
-      <button class="imp-cancel" onclick="document.getElementById('imp-preview').style.display='none'">Cancel</button>
+    <input type="file" id="fi" accept=".xlsx" style="display:none" onchange="handleFile(this.files[0])">
+    <div class="imp-st" id="imp-st"></div>
+    <div class="imp-pre" id="imp-pre">
+      <p style="font-size:12px;font-weight:bold;color:#1F4E79;margin-bottom:8px">Sheets found &mdash; rename if needed:</p>
+      <div id="sh-list"></div>
+      <button class="imp-btn" onclick="applyImport()">&#10003; Import all as tools</button>
+      <button class="imp-cl" onclick="document.getElementById('imp-pre').style.display='none'">Cancel</button>
     </div>
-    <p style="font-size:11px;color:#aaa;margin-top:14px;font-style:italic">
-      You can also add tools manually using the Robustness or Transparency tabs.
-    </p>
+    <p style="font-size:11px;color:#aaa;margin-top:14px;font-style:italic">You can also add tools manually in the Score tab.</p>
   </div>
 </div>
 
-<div id="panel-rob" class="panel"></div>
-<div id="panel-tra" class="panel"></div>
+<div id="panel-score" class="panel"></div>
 
 <div id="panel-chart" class="panel">
-  <div class="charts-layout">
-    <div class="chart-box">
-      <h3 class="rob-h">Robustness Profile</h3>
-      <canvas id="robChart" height="340"></canvas>
-      <div class="legend-row" id="rob-legend"></div>
-      <button class="export-btn exp-r" onclick="exportChart('robChart','robustness_profile')">Export PNG</button>
-    </div>
-    <div class="chart-box">
-      <h3 class="tra-h">Transparency Profile</h3>
-      <canvas id="traChart" height="340"></canvas>
-      <div class="legend-row" id="tra-legend"></div>
-      <button class="export-btn exp-t" onclick="exportChart('traChart','transparency_profile')">Export PNG</button>
-    </div>
+  <div class="chart-box">
+    <div class="chart-title">Robustness Profile &mdash; 10 Dimensions (0&ndash;10 each)</div>
+    <canvas id="rc" style="max-height:520px"></canvas>
+    <div class="legend-row" id="leg"></div>
+    <button class="exp-btn" onclick="exportPng()">Export PNG</button>
   </div>
-  <div class="compare-box">
-    <h3>Score Comparison</h3>
-    <div id="compare-container"></div>
-  </div>
+  <div class="cmp"><h3>Score Comparison Table</h3><div id="cmp"></div></div>
 </div>
 
 <script>
-// ── DIMENSIONS ─────────────────────────────────────────────────────────
-const ROB_DIMS=[
-  {id:"r1",code:"R1",label:"Training Data Quality",desc:"Was the data clean, well-processed, and trustworthy?",color:"#4472C4",light:"#DEEAF1",questions:[
-    {id:"r1_1",text:"Was there a description of data cleaning steps?"},
-    {id:"r1_2",text:"Was the handling of missing values described?"},
-    {id:"r1_3",text:"Was the handling of data imputation or transformation described?"},
-    {id:"r1_4",text:"Were any other data quality checking or preprocessing steps described?"},
-    {id:"r1_5",text:"Was the AI system performance assessed with synthetic data?"},
-    {id:"r1_6",text:"Was ground truth establishment described?"},
-  ]},
-  {id:"r2",code:"R2",label:"Training Data Representativeness",desc:"Does the training data reflect the intended population and context?",color:"#70AD47",light:"#E2EFDA",questions:[
-    {id:"r2_1",text:"Was the dataset origin described?"},
-    {id:"r2_2",text:"Was the timeframe of data collection reported?"},
-    {id:"r2_3",text:"Was the location/setting of data collection reported?"},
-    {id:"r2_4",text:"Was the total number of individuals in the training dataset reported?"},
-    {id:"r2_5",text:"Were demographic characteristics of the training dataset reported?"},
-  ]},
-  {id:"r3",code:"R3",label:"Model Development Rigour",desc:"Was training and optimisation methodologically sound?",color:"#FFC000",light:"#FFF2CC",questions:[
-    {id:"r3_1",text:"Was the method of data splitting described?"},
-    {id:"r3_2",text:"Was the method of resampling described? (e.g. cross-validation)"},
-    {id:"r3_3",text:"Was the optimisation method described?"},
-    {id:"r3_4",text:"Was hyperparameter optimisation performed?"},
-  ]},
-  {id:"r4",code:"R4",label:"Validation Rigour",desc:"How thoroughly was the model tested internally and externally?",color:"#FF4B00",light:"#FCE4D6",questions:[
-    {id:"r4_1",text:"Were performance metrics for internal validation reported?"},
-    {id:"r4_2",text:"Was there a rationale/justification for the selected metrics?"},
-    {id:"r4_3",text:"Are internal validation results specified with confidence intervals?"},
-    {id:"r4_4",text:"Was external validation conducted? (prospective or retrospective)"},
-    {id:"r4_5",text:"Was the external validation dataset origin described?"},
-    {id:"r4_6",text:"Were demographic characteristics of the external validation dataset reported?"},
-    {id:"r4_7",text:"Was data cleaning/preprocessing of the external validation dataset described?"},
-    {id:"r4_8",text:"Were performance metrics for external validation reported?"},
-    {id:"r4_9",text:"Are external validation results specified with confidence intervals?"},
-  ]},
-  {id:"r5",code:"R5",label:"Subgroup & Fairness Testing",desc:"Was the tool tested to check it works equally across groups?",color:"#CC0066",light:"#EAD1DC",questions:[
-    {id:"r5_1",text:"Was performance tested across different sexes?"},
-    {id:"r5_2",text:"Was performance tested across different race/ethnicities?"},
-    {id:"r5_3",text:"Was performance tested across different age groups?"},
-    {id:"r5_4",text:"Was performance tested across different clinical groups?"},
-    {id:"r5_5",text:"Was intersectionality (combined group membership) considered?"},
-    {id:"r5_6",text:"Were similarities/differences between study and training data described?"},
-    {id:"r5_7",text:"Was a formal fairness assessment reported?"},
-    {id:"r5_8",text:"Were prediction errors analysed to identify vulnerable subgroups?"},
-  ]},
-  {id:"r6",code:"R6",label:"Deployment & Operational Stability",desc:"Does the tool hold up under real-world variation in how it is used?",color:"#7030A0",light:"#D9D2E9",questions:[
-    {id:"r6_1",text:"Does the AI system address the need for a decision threshold?"},
-    {id:"r6_2",text:"Were uncertainty scores about the prediction displayed on the UX?"},
-    {id:"r6_3",text:"Was a function allocation / escalation channel to humans in place?"},
-    {id:"r6_4",text:"Is the system able to detect varying environments and adapt?"},
-    {id:"r6_5",text:"Was performance tested across different timespans?"},
-    {id:"r6_6",text:"Was performance tested across different locations?"},
-    {id:"r6_7",text:"Was performance tested across different settings?"},
-    {id:"r6_8",text:"Was performance tested across different levels of tool autonomy?"},
-    {id:"r6_9",text:"Was performance tested across different devices?"},
-  ]},
-  {id:"r7",code:"R7",label:"Stress-Testing & Sensitivity",desc:"Were the model's assumptions and limits actively probed?",color:"#C00000",light:"#F4CCCC",questions:[
-    {id:"r7_1",text:"Were different training strategies investigated?"},
-    {id:"r7_2",text:"Was the effect of different hyperparameter choices investigated?"},
-    {id:"r7_3",text:"Was the effect of data missingness on performance investigated?"},
-    {id:"r7_4",text:"Was the effect of data balancing on performance investigated?"},
-  ]},
-  {id:"r8",code:"R8",label:"Construct Validity",desc:"Does the tool measure what it claims — is it theoretically grounded?",color:"#00897B",light:"#E0F2F1",questions:[
-    {id:"r8_1",text:"Is the model based on a recognised psychological/medical theoretical framework?"},
-    {id:"r8_2",text:"Do authors claim (with evidence) features are appropriate for predicting the condition?"},
-    {id:"r8_3",text:"Do authors claim (with evidence) the prediction target captures the condition?"},
-    {id:"r8_4",text:"Do authors claim (with evidence) the model captures the feature-target relationship?"},
-    {id:"r8_5",text:"Was external scientific research supporting the tool's logic cited?"},
-    {id:"r8_6",text:"Was an explainability technique applied?"},
-    {id:"r8_7",text:"Were explainability results used to support construct validity claims?"},
-  ]},
+// ── DIMENSIONS ────────────────────────────────────────────────────────
+const D=[
+{id:1,lb:"Data Representativeness & Scope Match",
+ dc:"Intended population defined? Training & RCT populations match it?",
+ cl:"#4472C4",lt:"#DEEAF1",dn:13.5,sc:"compare",
+ cp:"If intended use entirely unspecified \u2192 cap 5/10. Mismatch penalty: \u22120.5 per mismatch (max \u22122.0)",
+ qs:[
+  {id:"d1_ri", t:"Region/Location of Intended Use reported",                         rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_si", t:"Setting of Intended Use reported",                                  rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_xi", t:"Sex of Target Population specified",                                rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_ei", t:"Race/Ethnicity of Target Population specified",                     rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_ai", t:"Age of Target Population specified",                                rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_mi", t:"Mental Health of Target Population specified",                      rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_ui", t:"Intended End Users described",                                      rf:"2.2", p:.5, tp:"bin"},
+  {id:"d1_ap", t:"Restrictions of applicability reported",                            rf:"2.2", p:1,  tp:"bin"},
+  {id:"d1_ot", t:"Training dataset origin described",                                 rf:"6.2", p:1,  tp:"bin"},
+  {id:"d1_tf", t:"Timeframe of training data collection reported",                    rf:"6.2", p:.5, tp:"bin"},
+  {id:"d1_lt", t:"Location/country of training data reported",                        rf:"6.2", p:.5, tp:"bin"},
+  {id:"d1_st", t:"Setting during training data collection reported",                  rf:"6.2", p:.5, tp:"bin"},
+  {id:"d1_xt", t:"Sex in training dataset reported",                                  rf:"6.3", p:.5, tp:"bin"},
+  {id:"d1_et", t:"Race/Ethnicity in training dataset reported",                       rf:"6.3", p:1,  tp:"bin"},
+  {id:"d1_at", t:"Age in training dataset reported",                                  rf:"6.3", p:.5, tp:"bin"},
+  {id:"d1_mt", t:"Mental health characteristics of training dataset reported",        rf:"6.3", p:.5, tp:"bin"},
+  {id:"d1_ss", t:"SES / employment of training dataset reported",                     rf:"6.3", p:.5, tp:"bin"},
+  {id:"d1_sm", t:"Similarities/differences between study and training data described",rf:"7.1", p:1,  tp:"bin"},
+  {id:"d1_bp", t:"Baseline population characteristics reported (sex, age, race, SES, mental health)", rf:"4.2", p:1, tp:"bin"},
+  {id:"d1_cr", t:"Country/region of RCT reported",                                   rf:"4.5", p:.5, tp:"bin"},
+  {id:"d1_sr", t:"Clinical setting of RCT described",                                 rf:"4.5", p:.5, tp:"bin"},
+  {id:"d1_lg", t:"Language(s) in which tool was used during RCT reported",            rf:"4.3", p:.5, tp:"bin"},
+  {id:"d1_mm", t:"MISMATCH PENALTY \u2014 number of major mismatches between intended/training/RCT populations (0\u20134):", rf:"adj", p:0, tp:"mis"},
+]},
+{id:2,lb:"Data Integrity & Quality",
+ dc:"Was training data clean, well-processed, and trustworthy?",
+ cl:"#70AD47",lt:"#E2EFDA",dn:8,sc:"weight",
+ cp:"Ground truth not described \u2192 cap 4/10",
+ qs:[
+  {id:"d2_n",  t:"Total N in training dataset reported",       rf:"6.2", p:1, tp:"bin"},
+  {id:"d2_cl", t:"Data cleaning steps described",              rf:"6.4", p:1, tp:"bin"},
+  {id:"d2_mv", t:"Handling of missing values described",       rf:"6.4", p:2, tp:"bin", wt:true},
+  {id:"d2_im", t:"Data imputation or transformation described",rf:"6.4", p:1, tp:"bin"},
+  {id:"d2_qc", t:"Other data quality checking steps described",rf:"6.4", p:1, tp:"bin"},
+  {id:"d2_gt", t:"Ground truth establishment described",       rf:"6.4", p:2, tp:"bin", wt:true, cr:true},
+  {id:"d2_sy", t:"Performance assessed with synthetic data",   rf:"6.4", p:1, tp:"bin"},
+]},
+{id:3,lb:"Initial Development",
+ dc:"Was the model built using sound methodological practices?",
+ cl:"#FFC000",lt:"#FFF2CC",dn:7,sc:"weight",
+ cp:"Data splitting not described \u2192 cap 4/10",
+ qs:[
+  {id:"d3_at", t:"Type of algorithm described",                              rf:"3.1", p:1, tp:"bin"},
+  {id:"d3_ar", t:"Rationale for choice of algorithm described",              rf:"3.1", p:1, tp:"bin"},
+  {id:"d3_ac", t:"Architecture described",                                   rf:"3.1", p:1, tp:"bin"},
+  {id:"d3_sp", t:"Method of data splitting described",                       rf:"6.1", p:1, tp:"bin", cr:true},
+  {id:"d3_re", t:"Method of resampling described (e.g. cross-validation)",   rf:"6.1", p:1, tp:"bin"},
+  {id:"d3_op", t:"Optimisation method described",                            rf:"6.1", p:1, tp:"bin"},
+  {id:"d3_hp", t:"Hyperparameter optimisation performed",                    rf:"6.1", p:1, tp:"bin"},
+]},
+{id:4,lb:"Internal Validation",
+ dc:"How thoroughly was the model tested on held-out same-source data?",
+ cl:"#FF4B00",lt:"#FCE4D6",dn:6,sc:"weight",
+ cp:"No performance metrics reported \u2192 score = 0/10",
+ qs:[
+  {id:"d4_me", t:"Performance metrics for internal validation reported",              rf:"6.5", p:2, tp:"bin", wt:true, cr:true},
+  {id:"d4_ra", t:"Rationale for selected metrics described",                          rf:"6.5", p:1, tp:"bin"},
+  {id:"d4_ci", t:"Internal validation results reported with confidence intervals",    rf:"6.5", p:2, tp:"bin", wt:true},
+  {id:"d4_ad", t:"Additional robustness information reported for internal validation",rf:"6.5", p:1, tp:"bin"},
+]},
+{id:5,lb:"Retrospective External Validation",
+ dc:"Was the model tested on an independent historical dataset from a different source?",
+ cl:"#CC0066",lt:"#EAD1DC",dn:6,sc:"gate",gt:"d5_co",
+ cp:"GATE: not conducted \u2192 0/10. If conducted: quality items scored (max\u00a06\u00a0pts)",
+ qs:[
+  {id:"d5_co", t:"Retrospective external validation conducted",                 rf:"6.6",  p:4,  tp:"bin", isG:true},
+  {id:"d5_or", t:"External validation dataset origin described",                rf:"6.7",  p:1,  tp:"bin"},
+  {id:"d5_tf", t:"Timeframe of external validation data reported",              rf:"6.7",  p:.5, tp:"bin"},
+  {id:"d5_lo", t:"Location of external validation reported",                    rf:"6.7",  p:.5, tp:"bin"},
+  {id:"d5_se", t:"Setting of external validation reported",                     rf:"6.7",  p:.5, tp:"bin"},
+  {id:"d5_au", t:"Autonomy level during external validation described",         rf:"6.7",  p:.5, tp:"bin"},
+  {id:"d5_sx", t:"Sex in external validation dataset reported",                 rf:"6.8",  p:.5, tp:"bin"},
+  {id:"d5_ra", t:"Race/Ethnicity in external validation dataset reported",      rf:"6.8",  p:1,  tp:"bin"},
+  {id:"d5_ag", t:"Age in external validation dataset reported",                 rf:"6.8",  p:.5, tp:"bin"},
+  {id:"d5_mh", t:"Mental health characteristics in external validation reported",rf:"6.8", p:.5, tp:"bin"},
+  {id:"d5_cl", t:"Data cleaning for external validation described",             rf:"6.10", p:.5, tp:"bin"},
+  {id:"d5_mv", t:"Missing values handling in external validation described",    rf:"6.10", p:.5, tp:"bin"},
+  {id:"d5_gt", t:"Ground truth for external validation described",              rf:"6.10", p:.5, tp:"bin"},
+  {id:"d5_me", t:"Performance metrics for external validation reported",        rf:"6.10", p:2,  tp:"bin", wt:true},
+  {id:"d5_mr", t:"Rationale for external validation metrics",                   rf:"6.10", p:.5, tp:"bin"},
+  {id:"d5_ci", t:"External validation results reported with CIs",               rf:"6.10", p:1,  tp:"bin"},
+  {id:"d5_ts", t:"Rationale for overall testing strategy described",            rf:"6.10", p:.5, tp:"bin"},
+]},
+{id:6,lb:"Prospective External Validation",
+ dc:"Was the model tested in real deployment on new patients? (RCT counts if tool actively deployed)",
+ cl:"#7030A0",lt:"#D9D2E9",dn:6,sc:"gate",gt:"d6_co",
+ cp:"GATE: not conducted \u2192 0/10. An RCT counts as prospective validation.",
+ qs:[
+  {id:"d6_co", t:"Prospective external validation conducted (RCT counts if tool actively deployed and clinical outcomes measured)", rf:"6.6", p:4, tp:"bin", isG:true},
+  {id:"d6_or", t:"Prospective validation dataset origin / country described",                   rf:"6.7/6.8", p:1, tp:"bin"},
+  {id:"d6_dm", t:"Prospective validation dataset demographics reported (sex, race, age)",       rf:"6.7/6.8", p:1, tp:"bin"},
+  {id:"d6_se", t:"Setting / deployment context of prospective validation described",            rf:"6.7/6.8", p:1, tp:"bin"},
+  {id:"d6_me", t:"Performance metrics for prospective validation reported",                     rf:"6.10",    p:2, tp:"bin", wt:true},
+  {id:"d6_ci", t:"Prospective validation results reported with CIs",                            rf:"6.10",    p:1, tp:"bin"},
+  {id:"d6_ts", t:"Testing strategy rationale for prospective validation (pre-registration etc)",rf:"6.10",    p:1, tp:"bin"},
+]},
+{id:7,lb:"Subgroup & Fairness Testing",
+ dc:"Was performance actively tested across demographic and clinical subgroups?",
+ cl:"#C00000",lt:"#F4CCCC",dn:10,sc:"weight",
+ cp:"No cap \u2014 score of 0 is expected for many tools and reflects field norms.",
+ qs:[
+  {id:"d7_sx", t:"Performance tested across sexes",                                    rf:"7.1", p:.5, tp:"bin"},
+  {id:"d7_ra", t:"Performance tested across race/ethnicities",                         rf:"7.1", p:1,  tp:"bin", wt:true},
+  {id:"d7_ag", t:"Performance tested across age groups",                               rf:"7.1", p:.5, tp:"bin"},
+  {id:"d7_cl", t:"Performance tested across clinical groups",                          rf:"7.1", p:1,  tp:"bin", wt:true},
+  {id:"d7_lo", t:"Performance tested across locations/sites",                          rf:"7.1", p:.5, tp:"bin"},
+  {id:"d7_ts", t:"Performance tested across timespans",                               rf:"7.1", p:.5, tp:"bin"},
+  {id:"d7_in", t:"Intersectionality (combined subgroup membership) considered",        rf:"7.1", p:1,  tp:"bin"},
+  {id:"d7_co", t:"Consistencies/inconsistencies of performance across groups described",rf:"7.1",p:1,  tp:"bin"},
+  {id:"d7_fa", t:"Fairness assessment or bias prevention measures reported",           rf:"7.1", p:2,  tp:"bin", wt:true},
+  {id:"d7_er", t:"Prediction errors analysed to identify vulnerable subgroups",        rf:"7.1", p:1,  tp:"bin"},
+]},
+{id:8,lb:"Deployment & Operational Stability",
+ dc:"Was the tool designed and tested for real-world deployment variability?",
+ cl:"#00695C",lt:"#E0F2F1",dn:10,sc:"weight",
+ cp:"No cap \u2014 partial scores are meaningful.",
+ qs:[
+  {id:"d8_th", t:"Decision threshold addressed (pre-set or user-selected described)", rf:"3.1", p:1,  tp:"bin"},
+  {id:"d8_un", t:"Uncertainty scores displayed on UX",                                rf:"3.1", p:1,  tp:"bin"},
+  {id:"d8_es", t:"Function allocation / escalation channel to humans in place",        rf:"3.1", p:1,  tp:"bin"},
+  {id:"d8_ad", t:"System able to detect varying environments and adapt",               rf:"3.1", p:1,  tp:"bin"},
+  {id:"d8_se", t:"Performance tested across settings",                               rf:"7.1", p:.5, tp:"bin"},
+  {id:"d8_dv", t:"Performance tested across devices/platforms",                       rf:"7.1", p:.5, tp:"bin"},
+  {id:"d8_av", t:"Performance tested across autonomy levels",                         rf:"7.1", p:.5, tp:"bin"},
+  {id:"d8_us", t:"Performance tested across end-user characteristics",                rf:"7.1", p:.5, tp:"bin"},
+  {id:"d8_ar", t:"Autonomy level of tool during RCT described",                       rf:"4.5", p:1,  tp:"bin"},
+  {id:"d8_dr", t:"Device used during study described",                                rf:"4.6", p:.5, tp:"bin"},
+  {id:"d8_ti", t:"Technical integration during study described",                      rf:"4.6", p:1,  tp:"bin"},
+  {id:"d8_ut", t:"End-user type during study described",                              rf:"4.7", p:.5, tp:"bin"},
+  {id:"d8_ue", t:"End-user expertise/training described",                             rf:"4.7", p:1,  tp:"bin"},
+  {id:"d8_bl", t:"Outcome blinding / bias prevention in outcome assessment described",rf:"4.8", p:1,  tp:"bin"},
+]},
+{id:9,lb:"Stress-Testing & Sensitivity",
+ dc:"Were the model's limits actively probed through sensitivity analyses?",
+ cl:"#E8703A",lt:"#FDE9D9",dn:9,sc:"weight",
+ cp:"No cap \u2014 most tools score 0\u20133. Scores \u22655 indicate exceptional stress-testing.",
+ qs:[
+  {id:"d9_cs", t:"Similarities/differences between studies on the tool described", rf:"7.1", p:1, tp:"bin"},
+  {id:"d9_tr", t:"Different training strategies investigated",                     rf:"7.1", p:1, tp:"bin"},
+  {id:"d9_hp", t:"Hyperparameter sensitivity / parameterization effects investigated",rf:"7.1",p:1,tp:"bin"},
+  {id:"d9_ms", t:"Data missingness impact on performance investigated",            rf:"7.1", p:1, tp:"bin"},
+  {id:"d9_ba", t:"Data balancing effects investigated",                            rf:"7.1", p:1, tp:"bin"},
+  {id:"d9_ot", t:"Other robustness/generalisability methods mentioned",            rf:"7.1", p:1, tp:"bin"},
+  {id:"d9_pl", t:"Performance limitations explicitly reported",                   rf:"4.9", p:1, tp:"bin"},
+  {id:"d9_rc", t:"Robustness claims made (positive) with justification",          rf:"4.9", p:1, tp:"bin"},
+  {id:"d9_ae", t:"Adverse events recorded and analysed",                          rf:"4.9", p:1, tp:"bin"},
+]},
+{id:10,lb:"Construct Validity",
+ dc:"Is the tool conceptually grounded \u2014 features, target, and model-task fit justified?",
+ cl:"#8E44AD",lt:"#F4ECF7",dn:11,sc:"weight",
+ cp:"No cap \u2014 0 on all three core claims is itself an important finding.",
+ qs:[
+  {id:"d10_or", t:"Justification of output\u2019s relevance to downstream clinical task", rf:"3.1", p:1, tp:"bin"},
+  {id:"d10_fw", t:"Theoretical framework (psychological/medical) described",              rf:"5.1", p:1, tp:"bin"},
+  {id:"d10_fe", t:"Features claimed appropriate for condition \u2014 WITH EVIDENCE\n0\u00a0=\u00a0not mentioned \u00b7 1\u00a0=\u00a0claimed, no evidence \u00b7 2\u00a0=\u00a0supported by evidence/explainability", rf:"5.1", p:2, tp:"grd"},
+  {id:"d10_tg", t:"Prediction target claimed appropriate \u2014 WITH EVIDENCE\n0\u00a0=\u00a0not mentioned \u00b7 1\u00a0=\u00a0claimed, no evidence \u00b7 2\u00a0=\u00a0supported by evidence/explainability", rf:"5.1", p:2, tp:"grd"},
+  {id:"d10_mf", t:"Model claimed to capture feature-target relationship \u2014 WITH EVIDENCE\n0\u00a0=\u00a0not mentioned \u00b7 1\u00a0=\u00a0claimed, no evidence \u00b7 2\u00a0=\u00a0supported by evidence/explainability", rf:"5.1", p:2, tp:"grd"},
+  {id:"d10_ex", t:"External scientific research supporting tool logic cited",              rf:"5.1", p:2, tp:"bin", wt:true},
+  {id:"d10_ep", t:"Explainability technique applied and used for construct validity claims",rf:"5.1",p:1, tp:"bin"},
+]},
 ];
 
-const TRA_DIMS=[
-  {id:"t1",code:"T1",label:"Tool Description",desc:"Was the tool clearly and fully described?",color:"#E8703A",light:"#FDE9D9",questions:[
-    {id:"t1_1",text:"Was the name of the AI system reported?"},
-    {id:"t1_2",text:"Was the version of the AI system reported?"},
-    {id:"t1_3",text:"Was the type of algorithm or base model described?"},
-    {id:"t1_4",text:"Was the rationale for the choice of algorithm reported?"},
-    {id:"t1_5",text:"Was the model architecture described?"},
-    {id:"t1_6",text:"Was the input modality (type of input data) described?"},
-    {id:"t1_7",text:"Was the output modality (type of output) described?"},
-    {id:"t1_8",text:"Was any certification of the AI system reported? (FDA, CE, etc.)"},
-  ]},
-  {id:"t2",code:"T2",label:"Intended Use Reporting",desc:"Was the intended scope of use clearly defined and reported?",color:"#3498DB",light:"#EBF3FB",questions:[
-    {id:"t2_1",text:"Was the intended use of the tool described?"},
-    {id:"t2_2",text:"Was the intended target population described?"},
-    {id:"t2_3",text:"Was the intended clinical setting/context described?"},
-    {id:"t2_4",text:"Were intended end users described?"},
-    {id:"t2_5",text:"Was the intended level of autonomy described?"},
-    {id:"t2_6",text:"Were any restrictions on applicability reported?"},
-  ]},
-  {id:"t3",code:"T3",label:"Training Data Reporting",desc:"Was the training data transparently described?",color:"#27AE60",light:"#E2EFDA",questions:[
-    {id:"t3_1",text:"Was the dataset origin described?"},
-    {id:"t3_2",text:"Was the timeframe of data collection reported?"},
-    {id:"t3_3",text:"Was the location/setting of data collection reported?"},
-    {id:"t3_4",text:"Was the total number of individuals in the training dataset reported?"},
-    {id:"t3_5",text:"Were demographic characteristics of the training dataset reported?"},
-    {id:"t3_6",text:"Was ground truth establishment described?"},
-  ]},
-  {id:"t4",code:"T4",label:"Data Processing Reporting",desc:"Was data handling described transparently?",color:"#F39C12",light:"#FEF9E7",questions:[
-    {id:"t4_1",text:"Was there a description of data cleaning steps?"},
-    {id:"t4_2",text:"Was the handling of missing values described?"},
-    {id:"t4_3",text:"Was the handling of data imputation or transformation described?"},
-    {id:"t4_4",text:"Were other data quality checking or preprocessing steps described?"},
-  ]},
-  {id:"t5",code:"T5",label:"Validation & Results Reporting",desc:"Were validation methods and results fully reported?",color:"#E74C3C",light:"#FDEDEC",questions:[
-    {id:"t5_1",text:"Were performance metrics for internal validation reported?"},
-    {id:"t5_2",text:"Was a rationale for the selected metrics provided?"},
-    {id:"t5_3",text:"Were internal validation results reported with confidence intervals?"},
-    {id:"t5_4",text:"Was external validation conducted and reported?"},
-    {id:"t5_5",text:"Were external validation results reported with confidence intervals?"},
-    {id:"t5_6",text:"Was a rationale for the overall testing strategy provided?"},
-    {id:"t5_7",text:"Were RCT outcome results reported with confidence intervals?"},
-  ]},
-  {id:"t6",code:"T6",label:"Study Conduct Reporting",desc:"Was the RCT transparently conducted and reported?",color:"#8E44AD",light:"#F4ECF7",questions:[
-    {id:"t6_1",text:"Was a sample size calculation reported?"},
-    {id:"t6_2",text:"Were inclusion and exclusion criteria reported?"},
-    {id:"t6_3",text:"Was blinding of outcome assessment reported?"},
-    {id:"t6_4",text:"Were assessors' qualifications described?"},
-    {id:"t6_5",text:"Were measures taken to prevent bias in outcome assessment described?"},
-    {id:"t6_6",text:"Was human judgement involvement in outcomes acknowledged?"},
-    {id:"t6_7",text:"Was the method of participant recruitment described?"},
-  ]},
-  {id:"t7",code:"T7",label:"COI & Limitations",desc:"Was the full picture — including limitations and conflicts — disclosed?",color:"#16A085",light:"#E8F8F5",questions:[
-    {id:"t7_1",text:"Were sources of funding reported?"},
-    {id:"t7_2",text:"Were authors' conflicts of interest reported?"},
-    {id:"t7_3",text:"Were study limitations reported in the Discussion?"},
-    {id:"t7_4",text:"Were performance limitations reported? (bias, generalisability, etc.)"},
-    {id:"t7_5",text:"Were possible risks of harms of the AI system reported?"},
-    {id:"t7_6",text:"Were adverse events recorded or analysed?"},
-  ]},
-];
-
-// ── EXCEL ROW → QUESTION MAPPING (0-based row index, col B = value) ────
-const ROW_MAP={
-  53:["t1_1"],54:["t1_2"],59:["t1_3"],60:["t1_4"],
-  62:["t1_5"],63:["t1_6"],65:["t1_7"],55:["t1_8"],
-  7:["t2_1"],39:["t2_2"],17:["t2_3"],47:["t2_4"],19:["t2_5"],52:["t2_6"],
-  703:["r2_1","t3_1"],704:["r2_2","t3_2"],706:["r2_3","t3_3"],
-  764:["r2_4","t3_4"],720:["r2_5","t3_5"],770:["r1_6","t3_6"],
-  765:["r1_1","t4_1"],766:["r1_2","t4_2"],767:["r1_3","t4_3"],768:["r1_4","t4_4"],
-  769:["r1_5"],
-  699:["r3_1"],700:["r3_2"],701:["r3_3"],702:["r3_4"],
-  772:["r4_1","t5_1"],778:["r4_2","t5_2"],779:["r4_3","t5_3"],
-  781:["r4_4","t5_4"],788:["r4_5"],817:["r4_6"],879:["r4_7"],
-  886:["r4_8"],894:["r4_9","t5_5"],893:["t5_6"],666:["t5_7"],
-  912:["r5_1"],913:["r5_2"],914:["r5_3"],918:["r5_4"],
-  921:["r5_5"],924:["r5_6"],926:["r5_7"],927:["r5_8"],
-  67:["r6_1"],68:["r6_2"],69:["r6_3"],70:["r6_4"],
-  905:["r6_5"],906:["r6_6"],907:["r6_7"],908:["r6_8"],909:["r6_9"],
-  925:["r7_1"],928:["r7_2"],929:["r7_3"],930:["r7_4"],
-  682:["r8_1"],683:["r8_2"],684:["r8_3"],685:["r8_4"],
-  686:["r8_5"],687:["r8_6"],688:["r8_7"],
-  79:["t6_1"],72:["t6_2"],674:["t6_3"],669:["t6_4"],
-  672:["t6_5"],668:["t6_6"],81:["t6_7"],
-  57:["t7_1"],58:["t7_2"],676:["t7_3"],679:["t7_4"],677:["t7_5"],680:["t7_6"],
+// ── EXCEL ROW MAP (0-based row idx -> question ids) ───────────────────
+const RM={
+  15:["d1_ri"],17:["d1_si"],25:["d1_xi"],29:["d1_ei"],31:["d1_ai"],
+  39:["d1_mi"],47:["d1_ui"],52:["d1_ap"],
+  703:["d1_ot"],704:["d1_tf"],706:["d1_lt"],711:["d1_st"],
+  724:["d1_xt"],728:["d1_et"],732:["d1_at"],748:["d1_mt"],736:["d1_ss"],
+  924:["d1_sm"],89:["d1_bp","d6_dm"],157:["d1_cr","d6_or"],
+  162:["d1_sr","d6_se"],149:["d1_lg"],
+  764:["d2_n"],765:["d2_cl"],766:["d2_mv"],767:["d2_im"],
+  768:["d2_qc"],770:["d2_gt"],769:["d2_sy"],
+  59:["d3_at"],60:["d3_ar"],62:["d3_ac"],699:["d3_sp"],
+  700:["d3_re"],701:["d3_op"],702:["d3_hp"],
+  772:["d4_me"],778:["d4_ra"],779:["d4_ci"],780:["d4_ad"],
+  781:["d5_co"],788:["d5_or"],792:["d5_tf"],796:["d5_lo"],
+  800:["d5_se"],804:["d5_au"],821:["d5_sx"],825:["d5_ra"],
+  829:["d5_ag"],845:["d5_mh"],879:["d5_cl"],880:["d5_mv"],
+  884:["d5_gt"],886:["d5_me"],892:["d5_mr"],894:["d5_ci"],893:["d5_ts"],
+  71:["d6_co"],666:["d6_me"],79:["d6_ts"],
+  912:["d7_sx"],913:["d7_ra"],914:["d7_ag"],918:["d7_cl"],
+  906:["d7_lo"],905:["d7_ts"],921:["d7_in"],922:["d7_co"],
+  926:["d7_fa"],927:["d7_er"],
+  67:["d8_th"],68:["d8_un"],69:["d8_es"],70:["d8_ad"],
+  907:["d8_se"],909:["d8_dv"],908:["d8_av"],920:["d8_us"],
+  163:["d8_ar"],164:["d8_dr"],167:["d8_ti"],168:["d8_ut"],
+  169:["d8_ue"],673:["d8_bl"],
+  923:["d9_cs"],925:["d9_tr"],928:["d9_hp"],929:["d9_ms"],
+  930:["d9_ba"],931:["d9_ot"],679:["d9_pl"],678:["d9_rc"],680:["d9_ae"],
+  66:["d10_or"],682:["d10_fw"],683:["d10_fe"],684:["d10_tg"],
+  685:["d10_mf"],686:["d10_ex"],687:["d10_ep"],
 };
 
-// ── STATE ──────────────────────────────────────────────────────────────
-const COLORS=["#1F4E79","#C00000","#375623","#7B3F00","#4B0082","#00695C","#BF360C","#1A237E","#880E4F","#0D47A1"];
-let tools=[],activeId=null,robChart=null,traChart=null,toolN=0,pending=[];
+// ── STATE ─────────────────────────────────────────────────────────────
+const COLS=["#1F4E79","#C00000","#375623","#7B3F00","#4B0082",
+            "#00695C","#BF360C","#1A237E","#880E4F","#0D47A1"];
+let tools=[],aid=null,rc=null,tn=0,pend=[];
 
-function blankAnswers(){
+function blank(){
   const a={};
-  [...ROB_DIMS,...TRA_DIMS].forEach(d=>d.questions.forEach(q=>{a[q.id]=null;}));
+  D.forEach(d=>d.qs.forEach(q=>{a[q.id]=q.tp==="mis"?0:null;}));
   return a;
 }
+
 function score(tool,dim){
-  const yes=dim.questions.filter(q=>tool.answers[q.id]===true).length;
-  const ans=dim.questions.filter(q=>tool.answers[q.id]!==null).length;
-  return ans===0?null:Math.round(yes/dim.questions.length*100);
-}
-function activeTool(){return tools.find(t=>t.id===activeId);}
-function rgba(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+  const a=tool.ans;
+  const allNull=dim.qs.every(q=>q.tp==="mis"||a[q.id]===null);
+  if(allNull) return null;
 
-// ── TAB ────────────────────────────────────────────────────────────────
-function switchTab(name){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t=>{
-    if(t.getAttribute('onclick')==="switchTab('"+name+"')") t.classList.add('active');
-  });
-  if(name==='chart') updateCharts();
-  if(name==='rob') renderPanel('rob');
-  if(name==='tra') renderPanel('tra');
-}
-
-// ── TOOLS ──────────────────────────────────────────────────────────────
-function addTool(name,answers){
-  const id='t'+(++toolN);
-  tools.push({id,name:name||('Tool '+toolN),color:COLORS[tools.length%COLORS.length],answers:answers||blankAnswers()});
-  activeId=id;
-  renderAll();
-}
-function removeTool(id){
-  tools=tools.filter(t=>t.id!==id);
-  activeId=tools.length?tools[tools.length-1].id:null;
-  renderAll();
-}
-function renderAll(){renderPanel('rob');renderPanel('tra');updateCharts();}
-
-// ── SCORING PANEL ──────────────────────────────────────────────────────
-function renderPanel(type){
-  const dims=type==='rob'?ROB_DIMS:TRA_DIMS;
-  const panel=document.getElementById('panel-'+type);
-  panel.innerHTML='';
-
-  // tool bar
-  const bar=document.createElement('div');bar.className='tool-bar';
-  tools.forEach(t=>{
-    const p=document.createElement('div');p.className='tool-pill'+(t.id===activeId?' active':'');
-    p.style.cssText=`background:${t.id===activeId?t.color:'#eee'};color:${t.id===activeId?'white':'#555'};border-color:${t.color}`;
-    p.textContent=t.name;p.onclick=()=>{activeId=t.id;renderAll();};
-    bar.appendChild(p);
-  });
-  if(activeTool()){
-    const inp=document.createElement('input');
-    Object.assign(inp,{type:'text',value:activeTool().name,placeholder:'Tool name'});
-    inp.style.cssText='border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px;font-family:Arial;width:140px';
-    inp.oninput=()=>{activeTool().name=inp.value;updateCharts();};
-    bar.appendChild(inp);
-    const rb=document.createElement('button');rb.className='remove-tool-btn';rb.textContent='Remove';
-    rb.onclick=()=>removeTool(activeId);bar.appendChild(rb);
+  if(dim.sc==="gate"){
+    const gq=dim.qs.find(q=>q.isG);
+    if(a[gq.id]!==true) return 0;
+    let qr=0,qm=0;
+    dim.qs.forEach(q=>{
+      if(q.isG) return;
+      qm+=q.p;
+      if(q.tp==="bin"&&a[q.id]===true) qr+=q.p;
+      else if(q.tp==="grd") qr+=(a[q.id]||0)*(q.p/2);
+    });
+    return clip(qm>0?(qr/qm)*10:10);
   }
-  const ab=document.createElement('button');ab.className='add-tool-btn';ab.textContent='+ Add Tool';
+
+  let raw=0;
+  dim.qs.forEach(q=>{
+    if(q.tp==="mis") return;
+    if(q.tp==="bin"&&a[q.id]===true) raw+=q.p;
+    else if(q.tp==="grd") raw+=(a[q.id]||0)*(q.p/2);
+  });
+  let s=(raw/dim.dn)*10;
+
+  if(dim.id===1){
+    s-=(a["d1_mm"]||0)*0.5;
+    const anyI=dim.qs.filter(q=>q.rf==="2.2"&&q.tp==="bin").some(q=>a[q.id]===true);
+    if(!anyI) s=Math.min(s,5);
+  }
+  if(dim.id===2&&a["d2_gt"]!==true) s=Math.min(s,4);
+  if(dim.id===3&&a["d3_sp"]!==true) s=Math.min(s,4);
+  if(dim.id===4&&a["d4_me"]!==true) s=0;
+
+  return clip(s);
+}
+
+function clip(v){return Math.max(0,Math.min(10,Math.round(v*10)/10));}
+function at(){return tools.find(t=>t.id===aid);}
+function rgb(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+
+function addTool(name,ans){
+  const id="t"+(++tn);
+  tools.push({id,name:name||("Tool "+tn),color:COLS[tools.length%COLS.length],ans:ans||blank()});
+  aid=id;renderAll();
+}
+function delTool(id){tools=tools.filter(t=>t.id!==id);aid=tools.length?tools[tools.length-1].id:null;renderAll();}
+function renderAll(){renderScore();updChart();}
+
+function go(name){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+  document.querySelectorAll(".tab").forEach(t=>{if(t.getAttribute("onclick")==="go('"+name+"')") t.classList.add("active");});
+  if(name==="chart") updChart();
+  if(name==="score") renderScore();
+}
+
+function setA(tid,qid,val){
+  const t=tools.find(x=>x.id===tid);if(!t)return;
+  if(typeof val==="boolean"&&t.ans[qid]===val) val=null;
+  t.ans[qid]=val;
+  renderScore();updChart();
+}
+
+function renderScore(){
+  const panel=document.getElementById("panel-score");
+  panel.innerHTML="";
+  // toolbar
+  const bar=document.createElement("div");bar.className="tool-bar";
+  tools.forEach(t=>{
+    const p=document.createElement("div");
+    p.className="tool-pill"+(t.id===aid?" active":"");
+    p.style.cssText=`background:${t.id===aid?t.color:"#eee"};color:${t.id===aid?"white":"#555"};border-color:${t.color}`;
+    p.textContent=t.name;p.onclick=()=>{aid=t.id;renderAll();};bar.appendChild(p);
+  });
+  if(at()){
+    const inp=document.createElement("input");
+    Object.assign(inp,{type:"text",value:at().name,placeholder:"Tool name"});
+    inp.style.cssText="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px;font-family:Arial;width:150px";
+    inp.oninput=()=>{at().name=inp.value;updChart();};bar.appendChild(inp);
+    const db=document.createElement("button");db.className="del-btn";db.textContent="Remove";
+    db.onclick=()=>delTool(aid);bar.appendChild(db);
+  }
+  const ab=document.createElement("button");ab.className="add-btn";ab.textContent="+ Add Tool";
   ab.onclick=()=>addTool();bar.appendChild(ab);
   panel.appendChild(bar);
 
-  if(!activeTool()){
-    const m=document.createElement('p');m.style.cssText='color:#aaa;font-style:italic;padding:20px';
-    m.textContent='Import an Excel file or add a tool manually to start scoring.';
+  if(!at()){
+    const m=document.createElement("p");m.style.cssText="color:#aaa;font-style:italic;padding:20px";
+    m.textContent="Import an Excel file or add a tool manually to start scoring.";
     panel.appendChild(m);return;
   }
+  const tool=at();
 
-  const tool=activeTool();
   // chips
-  const chips=document.createElement('div');chips.className='score-chips';
-  dims.forEach(d=>{
-    const s=score(tool,d);const c=document.createElement('span');c.className='score-chip';
-    c.style.cssText=`background:${d.light};color:${d.color};border:1px solid ${d.color}`;
-    c.textContent=`${d.code}: ${s!==null?s+'%':'—'}`;chips.appendChild(c);
+  const chips=document.createElement("div");chips.className="chips";
+  D.forEach(d=>{
+    const s=score(tool,d);
+    const c=document.createElement("span");c.className="chip";
+    c.style.cssText=`background:${d.lt};color:${d.cl};border:1px solid ${d.cl}`;
+    c.textContent=`D${d.id}: ${s!==null?s.toFixed(1):"—"}/10`;chips.appendChild(c);
   });
   panel.appendChild(chips);
 
-  // questions
-  const wrap=document.createElement('div');wrap.className='scoring-wrap';
-  dims.forEach(d=>{
-    const yes=d.questions.filter(q=>tool.answers[q.id]===true).length;
-    const s=score(tool,d);
-    const block=document.createElement('div');block.className='dim-block';
-    const hdr=document.createElement('div');hdr.className='dim-header';hdr.style.background=d.light;
-    hdr.innerHTML=`<div><div class="dim-title" style="color:${d.color}">${d.code} — ${d.label}</div><div class="dim-desc">${d.desc}</div></div>
-      <div style="display:flex;align-items:center"><span class="dim-badge" style="color:${d.color}">${yes}/${d.questions.length} = ${s!==null?s+'%':'—'}</span><span style="margin-left:8px;color:#aaa">▾</span></div>`;
-    const qs=document.createElement('div');qs.className='dim-qs';
-    d.questions.forEach(q=>{
-      const row=document.createElement('div');row.className='q-row';
-      const ans=tool.answers[q.id];
-      row.innerHTML=`<span class="q-code">${q.id.toUpperCase()}</span><span class="q-text">${q.text}</span>
-        <div class="q-toggle">
-          <button class="q-btn yes ${ans===true?'active':''}" onclick="setAns('${tool.id}','${q.id}',true,'${type}')">Yes</button>
-          <button class="q-btn no ${ans===false?'active':''}" onclick="setAns('${tool.id}','${q.id}',false,'${type}')">No</button>
-        </div>`;
+  // dims
+  const wrap=document.createElement("div");wrap.className="scoring-wrap";
+  D.forEach(dim=>{
+    const sc=score(tool,dim);
+    const block=document.createElement("div");block.className="dim-block";
+    const hdr=document.createElement("div");hdr.className="dim-header";hdr.style.background=dim.lt;
+    const fml=dim.sc==="gate"?`GATED: absent=0/10, present=(quality/${dim.dn})×10`:
+               dim.sc==="compare"?`(raw/${dim.dn})×10 − mismatch penalty`:`(raw/${dim.dn})×10`;
+    hdr.innerHTML=`<div>
+      <div class="dim-title" style="color:${dim.cl}">D${dim.id} \u2014 ${dim.lb}</div>
+      <div class="dim-meta">${dim.dc} &middot; ${fml}</div>
+    </div>
+    <div style="display:flex;align-items:center">
+      <span class="dim-badge" style="color:${dim.cl}">${sc!==null?sc.toFixed(1):"—"}/10</span>
+      <span style="margin-left:8px;color:#aaa;font-size:14px">\u25be</span>
+    </div>`;
+
+    const qs=document.createElement("div");qs.className="dim-qs";
+    const cn=document.createElement("div");cn.className="cap-notice";
+    cn.innerHTML=`\u26a0\ufe0f <strong>Cap/Gate:</strong> ${dim.cp}`;qs.appendChild(cn);
+
+    dim.qs.forEach(q=>{
+      const row=document.createElement("div");
+      row.className="q-row"+(q.isG?" gate":"");
+      const v=tool.ans[q.id];
+
+      if(q.tp==="mis"){
+        row.innerHTML=`<span class="q-pts">adj</span>
+          <div class="q-text"><div style="font-size:11px;font-style:italic;color:#555">${q.t}</div>
+          <div class="q-ref">Adjuster \u2014 each mismatch \u22120.5 from D1 score (max 4)</div></div>
+          <div class="q-ctrl">
+            <input type="number" min="0" max="4" step="1" value="${v||0}"
+              style="width:60px;border:1px solid #ddd;border-radius:4px;padding:4px 6px;font-size:12px;font-family:Arial"
+              oninput="setA('${tool.id}','${q.id}',parseInt(this.value)||0)">
+            <span style="font-size:11px;color:#888;margin-left:4px">mismatches</span>
+          </div>`;
+      } else if(q.tp==="grd"){
+        const gv=v!==null?v:null;
+        const lines=q.t.split("\n");
+        row.innerHTML=`<span class="q-pts" style="color:${dim.cl}">${q.p}pt</span>
+          <div class="q-text"><div>${lines[0]}</div>
+          <div class="q-ref">${q.rf} &middot; ${lines[1]||""}</div></div>
+          <div class="q-ctrl"><div class="q-graded">
+            <button class="q-grade ${gv===0?"on0":""}" title="0 = not mentioned" onclick="setA('${tool.id}','${q.id}',0)">0</button>
+            <button class="q-grade ${gv===1?"on1":""}" title="1 = claimed, no evidence" onclick="setA('${tool.id}','${q.id}',1)">1</button>
+            <button class="q-grade ${gv===2?"on2":""}" title="2 = supported by evidence" onclick="setA('${tool.id}','${q.id}',2)">2</button>
+          </div></div>`;
+      } else {
+        const gt=q.isG?"\uD83D\uDD11 GATE \u00b7 ":"";
+        const wt=q.wt?`<span style="color:#C00;font-size:9px;margin-left:3px">[\u00d72]</span>`:"";
+        const cr=q.cr?`<span style="color:#E74C3C;font-size:9px;margin-left:3px">[critical]</span>`:"";
+        row.innerHTML=`<span class="q-pts" style="color:${dim.cl}">${q.p}pt${q.p>=2?wt:""}</span>
+          <div class="q-text"><div>${gt}${q.t}${cr}</div>
+          <div class="q-ref">${q.rf}</div></div>
+          <div class="q-ctrl"><div class="q-toggle">
+            <button class="q-btn yes ${v===true?"on":""}" onclick="setA('${tool.id}','${q.id}',true)">Yes</button>
+            <button class="q-btn no ${v===false?"on":""}" onclick="setA('${tool.id}','${q.id}',false)">No</button>
+          </div></div>`;
+      }
       qs.appendChild(row);
     });
-    hdr.onclick=()=>{qs.classList.toggle('open');hdr.querySelector('span:last-child').textContent=qs.classList.contains('open')?'▴':'▾';};
+
+    hdr.onclick=()=>{
+      qs.classList.toggle("open");
+      hdr.querySelector("span:last-child").textContent=qs.classList.contains("open")?"\u25b4":"\u25be";
+    };
     block.appendChild(hdr);block.appendChild(qs);wrap.appendChild(block);
   });
   panel.appendChild(wrap);
 }
 
-function setAns(toolId,qId,val,type){
-  const t=tools.find(x=>x.id===toolId);if(!t)return;
-  t.answers[qId]=t.answers[qId]===val?null:val;
-  renderPanel(type);updateCharts();
-}
-
-// ── CHARTS ─────────────────────────────────────────────────────────────
-function datasets(dims){
-  return tools.map(t=>({
+function updChart(){
+  const ds=tools.map(t=>({
     label:t.name,
-    data:dims.map(d=>score(t,d)),
-    backgroundColor:rgba(t.color,0.12),
-    borderColor:t.color,borderWidth:2.5,
+    data:D.map(d=>{const s=score(t,d);return s!==null?s:null;}),
+    backgroundColor:rgb(t.color,.12),borderColor:t.color,borderWidth:2.5,
     pointBackgroundColor:t.color,pointRadius:5,spanGaps:false,
   }));
-}
-function radarOpts(lc){return{responsive:true,scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:10},color:'#999'},pointLabels:{font:{size:11,weight:'bold'},color:lc},grid:{color:'rgba(0,0,0,0.07)'},angleLines:{color:'rgba(0,0,0,0.1)'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw!=null?ctx.raw+'%':'N/A'}`}}}};}
 
-function updateCharts(){
-  const rl=ROB_DIMS.map(d=>d.code),tl=TRA_DIMS.map(d=>d.code);
-  if(!robChart){robChart=new Chart(document.getElementById('robChart').getContext('2d'),{type:'radar',data:{labels:rl,datasets:datasets(ROB_DIMS)},options:radarOpts('#1F4E79')});}
-  else{robChart.data.datasets=datasets(ROB_DIMS);robChart.update();}
-  if(!traChart){traChart=new Chart(document.getElementById('traChart').getContext('2d'),{type:'radar',data:{labels:tl,datasets:datasets(TRA_DIMS)},options:radarOpts('#B8471A')});}
-  else{traChart.data.datasets=datasets(TRA_DIMS);traChart.update();}
-  ['rob','tra'].forEach(type=>{
-    document.getElementById(type+'-legend').innerHTML=tools.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div><span>${t.name}</span></div>`).join('');
-  });
-  const all=[...ROB_DIMS,...TRA_DIMS];
-  let html=`<table class="ct"><thead><tr><th class="gh">Tool</th>${ROB_DIMS.map(d=>`<th class="rh">${d.code}</th>`).join('')}${TRA_DIMS.map(d=>`<th class="th">${d.code}</th>`).join('')}</tr></thead><tbody>`;
+  if(!rc){
+    rc=new Chart(document.getElementById("rc").getContext("2d"),{
+      type:"radar",
+      data:{labels:D.map(d=>`D${d.id}: ${d.lb}`),datasets:ds},
+      options:{responsive:true,
+        scales:{r:{min:0,max:10,ticks:{stepSize:2,font:{size:10},color:"#999"},
+          pointLabels:{font:{size:10,weight:"bold"},color:"#1F4E79"},
+          grid:{color:"rgba(0,0,0,.07)"},angleLines:{color:"rgba(0,0,0,.1)"}}},
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw!==null?c.raw+"/10":"N/A"}`}}}
+      }
+    });
+  } else {rc.data.datasets=ds;rc.update();}
+
+  document.getElementById("leg").innerHTML=tools.map(t=>
+    `<div class="leg"><div class="dot" style="background:${t.color}"></div><span>${t.name}</span></div>`
+  ).join("");
+
+  let html=`<table class="ct"><thead><tr><th>Tool</th>${D.map(d=>`<th title="${d.lb}">D${d.id}</th>`).join("")}<th>Mean</th></tr></thead><tbody>`;
   tools.forEach(t=>{
-    html+=`<tr><td class="nc" style="color:${t.color}">${t.name}</td>`;
-    all.forEach(d=>{const s=score(t,d);const c=d.id.startsWith('r')?'#4472C4':'#E8703A';html+=`<td>${s!=null?`<div class="bar-w"><div class="bar-f" style="width:${s}%;background:${c}"></div></div>${s}%`:'—'}</td>`;});
-    html+='</tr>';
+    const sc=D.map(d=>score(t,d));
+    const vl=sc.filter(v=>v!==null);
+    const mn=vl.length?(vl.reduce((a,b)=>a+b,0)/vl.length).toFixed(1):"—";
+    html+=`<tr><td style="color:${t.color}">${t.name}</td>`;
+    sc.forEach(s=>{html+=`<td>${s!==null?`<div class="bw"><div class="bf" style="width:${s*10}%"></div></div>${s.toFixed(1)}`:"—"}</td>`;});
+    html+=`<td><strong>${mn}</strong></td></tr>`;
   });
-  html+='</tbody></table>';
-  document.getElementById('compare-container').innerHTML=html;
+  html+="</tbody></table>";
+  document.getElementById("cmp").innerHTML=html;
 }
-function exportChart(id,fn){const a=document.createElement('a');a.download=fn+'.png';a.href=document.getElementById(id).toDataURL('image/png');a.click();}
 
-// ── IMPORT ─────────────────────────────────────────────────────────────
-function handleFile(file){
-  if(!file)return;
-  if(!file.name.toLowerCase().endsWith('.xlsx')){setStatus('❌ Please upload an .xlsx file.','#c00');return;}
-  setStatus('⏳ Reading file...','#555');
+function exportPng(){const a=document.createElement("a");a.download="robustness_profile.png";a.href=document.getElementById("rc").toDataURL("image/png");a.click();}
+
+// ── IMPORT ────────────────────────────────────────────────────────────
+function handleFile(f){
+  if(!f)return;
+  if(!f.name.toLowerCase().endsWith(".xlsx")){setSt("&#10060; Please upload an .xlsx file.","#c00");return;}
+  setSt("&#8987; Reading file...","#555");
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      pending=wb.SheetNames.map(name=>{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+      pend=wb.SheetNames.map(name=>{
         const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:null});
-        return{name,answers:parseRows(rows)};
+        return{name,ans:parseRows(rows)};
       });
-      setStatus(`✅ Found <strong>${pending.length}</strong> sheet(s). Review below.`,'#00695C');
-      showPreview();
-    }catch(err){setStatus('❌ Error: '+err.message,'#c00');}
+      setSt(`&#10003; Found <strong>${pend.length}</strong> sheet(s). Review below.`,"#00695C");
+      showPrev();
+    }catch(err){setSt("&#10060; Error: "+err.message,"#c00");}
   };
-  r.readAsArrayBuffer(file);
+  r.readAsArrayBuffer(f);
 }
+
 function parseRows(rows){
-  const a=blankAnswers();
+  const a=blank();
   rows.forEach((row,idx)=>{
-    if(!ROW_MAP[idx])return;
+    if(!RM[idx])return;
     const raw=row[1];
-    const yes=raw!==null&&raw!==undefined&&String(raw).trim()!==''&&String(raw).trim().toLowerCase()!=='none';
-    ROW_MAP[idx].forEach(qId=>{a[qId]=yes;});
+    const yes=raw!==null&&raw!==undefined&&String(raw).trim()!==""&&String(raw).trim().toLowerCase()!=="none";
+    RM[idx].forEach(qid=>{
+      let tp="bin";
+      D.forEach(d=>d.qs.forEach(q=>{if(q.id===qid)tp=q.tp;}));
+      if(tp==="grd") a[qid]=yes?1:0;
+      else if(tp==="bin") a[qid]=yes;
+    });
   });
   return a;
 }
-function setStatus(msg,color){const el=document.getElementById('imp-status');el.style.display='block';el.style.color=color;el.innerHTML=msg;}
-function showPreview(){
-  const list=document.getElementById('sheet-list');list.innerHTML='';
-  pending.forEach((s,i)=>{
-    const yes=Object.values(s.answers).filter(v=>v===true).length;
-    const total=Object.values(s.answers).length;
-    const row=document.createElement('div');row.className='sheet-row';
-    row.innerHTML=`<span style="font-size:16px">📄</span><span style="flex:1;font-weight:bold;font-size:12px">${s.name}</span>
-      <span style="font-size:11px;color:#00897B;font-weight:bold">${yes} Yes / ${total} questions</span>
-      <input type="text" value="${s.name}" style="border:1px solid #ccc;border-radius:4px;padding:3px 8px;font-size:11px;width:160px;font-family:Arial" oninput="pending[${i}].name=this.value" placeholder="Tool name">`;
+
+function setSt(msg,col){const el=document.getElementById("imp-st");el.style.display="block";el.style.color=col;el.innerHTML=msg;}
+
+function showPrev(){
+  const list=document.getElementById("sh-list");list.innerHTML="";
+  pend.forEach((s,i)=>{
+    const cnt=Object.values(s.ans).filter(v=>v===true||v===1||v===2).length;
+    const row=document.createElement("div");row.className="sh-row";
+    row.innerHTML=`<span style="font-size:16px">&#128196;</span>
+      <span style="flex:1;font-weight:bold;font-size:12px">${s.name}</span>
+      <span style="font-size:11px;color:#00897B;font-weight:bold">${cnt} items answered</span>
+      <input type="text" value="${s.name}"
+        style="border:1px solid #ccc;border-radius:4px;padding:3px 8px;font-size:11px;width:160px;font-family:Arial"
+        oninput="pend[${i}].name=this.value" placeholder="Tool name">`;
     list.appendChild(row);
   });
-  document.getElementById('imp-preview').style.display='block';
+  document.getElementById("imp-pre").style.display="block";
 }
+
 function applyImport(){
-  pending.forEach(s=>addTool(s.name,s.answers));
-  pending=[];
-  document.getElementById('imp-preview').style.display='none';
-  setStatus(`✅ Imported ${tools.length} tool(s) — switch to Robustness or Radar Charts tab.`,'#00695C');
+  pend.forEach(s=>addTool(s.name,s.ans));
+  pend=[];
+  document.getElementById("imp-pre").style.display="none";
+  setSt(`&#10003; Imported ${tools.length} tool(s) \u2014 go to Score or Radar Chart tab.`,"#00695C");
 }
 </script>
 </body>
