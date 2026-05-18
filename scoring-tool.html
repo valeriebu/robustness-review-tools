@@ -17,6 +17,7 @@ body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; font-si
 .tab { padding: 7px 18px; border: none; border-radius: 6px 6px 0 0;
   font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial; }
 .tab.imp  { background: #E8F8F5; color: #00695C; }
+.tab.imp  { background: #E8F8F5; color: #00695C; }
 .tab.rob  { background: #DEEAF1; color: #1F4E79; }
 .tab.tra  { background: #FDE9D9; color: #B8471A; }
 .tab.chart { background: #E2EFDA; color: #375623; }
@@ -122,7 +123,43 @@ table.ctab tr:hover td { background: #fafafa; }
   </div>
 </div>
 
-<div id="panel-rob" class="panel active"></div>
+<div id="panel-imp" class="panel active">
+  <div style="max-width:700px">
+    <h2 style="color:#00695C;font-size:15px;margin-bottom:8px">Import from Excel</h2>
+    <p style="font-size:12px;color:#555;margin-bottom:16px;line-height:1.6">
+      Upload your <strong>.xlsx file</strong> — one sheet per tool, using the standard codebook format
+      (rows = fields, column A = field name, column B = extracted value).
+      A filled cell = <strong style="color:#70AD47">Yes</strong>, empty or "None" = <strong style="color:#E74C3C">No</strong>.
+      Each sheet becomes one tool automatically.
+    </p>
+    <div id="drop-zone" style="border:2px dashed #00897B;border-radius:8px;padding:32px;
+      text-align:center;background:#E8F8F5;cursor:pointer;margin-bottom:12px"
+      onclick="document.getElementById('file-input').click()"
+      ondragover="event.preventDefault();this.style.background='#B2DFDB'"
+      ondragleave="this.style.background='#E8F8F5'"
+      ondrop="handleDrop(event)">
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <div style="font-weight:bold;color:#00695C;font-size:13px">Click to upload or drag &amp; drop</div>
+      <div style="color:#777;font-size:11px;margin-top:4px">.xlsx files — multiple sheets supported, one tool per sheet</div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx" style="display:none" onchange="handleFile(this.files[0])">
+    <div id="import-status" style="display:none;background:white;border-radius:8px;
+      border:1px solid #dce3ec;padding:14px;margin-bottom:12px;font-size:12px"></div>
+    <div id="import-preview" style="display:none">
+      <h3 style="font-size:13px;font-weight:bold;color:#1F4E79;margin-bottom:8px">Sheets detected — rename if needed then import:</h3>
+      <div id="sheet-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <button onclick="applyImport()" style="padding:9px 24px;background:#00897B;color:white;
+        border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;font-family:Arial">
+        ✓ Import all sheets as tools
+      </button>
+      <button onclick="document.getElementById('import-preview').style.display='none'"
+        style="padding:9px 16px;background:#eee;color:#555;border:none;border-radius:6px;
+        font-size:13px;cursor:pointer;font-family:Arial;margin-left:8px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="panel-rob" class="panel"></div>
 <div id="panel-tra" class="panel"></div>
 <div id="panel-chart" class="panel">
   <div class="charts-layout">
@@ -656,10 +693,22 @@ function exportChart(canvasId, filename) {
 }
 
 function switchTab(name) {
-  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.getElementById("panel-" + name).classList.add("active");
-  document.querySelector(`.tab.${name}`).classList.add("active");
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  const tabEl = document.querySelector('.tab-' + name);
+  if (tabEl) tabEl.classList.add('active');
+  // fallback: find by class
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + name + "'")) {
+      t.classList.add('active');
+    }
+  });
+  if (name === 'chart') updateCharts();
+  if (name === 'rob') { renderToolBar('rob'); renderScoringPanel('rob'); }
+  if (name === 'tra') { renderToolBar('tra'); renderScoringPanel('tra'); }
+}`).classList.add("active");
   if (name === "chart") updateCharts();
 }
 
