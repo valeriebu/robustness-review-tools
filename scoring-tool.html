@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Robustness & Transparency Scoring</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; font-size: 13px; }
@@ -15,6 +16,7 @@ body { font-family: Arial, sans-serif; background: #f0f3f7; color: #222; font-si
 .tabs { display: flex; gap: 4px; }
 .tab { padding: 7px 18px; border: none; border-radius: 6px 6px 0 0;
   font-size: 12px; font-weight: bold; cursor: pointer; font-family: Arial; }
+.tab.imp  { background: #E8F8F5; color: #00695C; }
 .tab.rob  { background: #DEEAF1; color: #1F4E79; }
 .tab.tra  { background: #FDE9D9; color: #B8471A; }
 .tab.chart { background: #E2EFDA; color: #375623; }
@@ -113,7 +115,8 @@ table.ctab tr:hover td { background: #fafafa; }
 <div class="top-bar">
   <h1>Robustness &amp; Transparency Scoring Tool</h1>
   <div class="tabs">
-    <button class="tab rob active" onclick="switchTab('rob')">🔵 Robustness</button>
+    <button class="tab imp active" onclick="switchTab('imp')">📥 Import Excel</button>
+    <button class="tab rob" onclick="switchTab('rob')">🔵 Robustness</button>
     <button class="tab tra" onclick="switchTab('tra')">🟠 Transparency</button>
     <button class="tab chart" onclick="switchTab('chart')">📊 Radar Charts</button>
   </div>
@@ -660,10 +663,181 @@ function switchTab(name) {
   if (name === "chart") updateCharts();
 }
 
+
+// ─────────────────────────────────────────────
+// EXCEL IMPORT
+// ─────────────────────────────────────────────
+
+// Maps 0-based row index in the Excel to a scoring question ID
+// Row 0 = blank, Row 1 = header, so data rows start at index 2 (0-based)
+// But our mapping is based on the row number printed earlier (0-indexed from Python)
+const ROW_TO_QUESTION = {
+  // R1 - Training Data Quality
+  764: "r1_1", 765: "r1_2", 766: "r1_3", 767: "r1_4", 768: "r1_5", 769: "r1_6",
+  // R2 - Training Data Representativeness
+  702: "r2_1", 703: "r2_2", 705: "r2_3", 763: "r2_4", 719: "r2_5",
+  // R3 - Model Development Rigour
+  698: "r3_1", 699: "r3_2", 700: "r3_3", 701: "r3_4",
+  // R4 - Validation Rigour
+  771: "r4_1", 777: "r4_2", 778: "r4_3", 780: "r4_4",
+  884: "r4_5", 816: "r4_6", 878: "r4_7", 885: "r4_8", 893: "r4_9",
+  // R5 - Subgroup & Fairness Testing
+  911: "r5_1", 912: "r5_2", 913: "r5_3", 917: "r5_4",
+  920: "r5_5", 923: "r5_6", 925: "r5_7", 926: "r5_8",
+  // R6 - Deployment & Operational Stability
+  66: "r6_1", 67: "r6_2", 68: "r6_3", 69: "r6_4",
+  904: "r6_5", 905: "r6_6", 906: "r6_7", 907: "r6_8", 908: "r6_9",
+  // R7 - Stress-Testing & Sensitivity
+  924: "r7_1", 927: "r7_2", 928: "r7_3", 929: "r7_4",
+  // R8 - Construct Validity
+  681: "r8_1", 682: "r8_2", 683: "r8_3", 684: "r8_4",
+  685: "r8_5", 686: "r8_6", 687: "r8_7",
+  // T1 - Tool Description
+  52: "t1_1", 53: "t1_2", 58: "t1_3", 59: "t1_4",
+  61: "t1_5", 62: "t1_6", 64: "t1_7", 54: "t1_8",
+  // T2 - Intended Use Reporting
+  6: "t2_1", 7: "t2_2", 11: "t2_3", 46: "t2_4", 18: "t2_5", 51: "t2_6",
+  // T3 - Training Data Reporting
+  // (shares rows with R2 — both get set from same rows, that's fine)
+  // T4 - Data Processing Reporting (shares rows with R1)
+  // T5 - Validation & Results Reporting
+  665: "t5_7", 892: "t5_6",
+  // T6 - Study Conduct Reporting
+  78: "t6_1", 71: "t6_2", 673: "t6_3", 668: "t6_4",
+  671: "t6_5", 667: "t6_6", 80: "t6_7",
+  // T7 - COI & Limitations
+  56: "t7_1", 57: "t7_2", 675: "t7_3", 678: "t7_4", 676: "t7_5", 679: "t7_6",
+};
+
+// Questions that map to BOTH robustness and transparency dimensions
+const DUAL_MAP = {
+  764: ["r1_1", "t4_1"], 765: ["r1_2", "t4_2"],
+  766: ["r1_3", "t4_3"], 767: ["r1_4", "t4_4"],
+  702: ["r2_1", "t3_1"], 703: ["r2_2", "t3_2"],
+  705: ["r2_3", "t3_3"], 763: ["r2_4", "t3_4"],
+  719: ["r2_5", "t3_5"], 769: ["r1_6", "t3_6"],
+  771: ["r4_1", "t5_1"], 777: ["r4_2", "t5_2"],
+  778: ["r4_3", "t5_3"], 780: ["r4_4", "t5_4"],
+  893: ["r4_9", "t5_5"],
+};
+
+let pendingSheets = []; // [{name, answers}]
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.background = '#E8F8F5';
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (!file.name.endsWith('.xlsx')) {
+    showStatus('❌ Please upload an .xlsx file.', '#c00');
+    return;
+  }
+  showStatus('⏳ Reading file...', '#555');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      pendingSheets = [];
+
+      wb.SheetNames.forEach(sheetName => {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        const answers = parseSheetToAnswers(rows, sheetName);
+        pendingSheets.push({ name: sheetName, answers });
+      });
+
+      showStatus(`✅ Found <strong>${pendingSheets.length} sheet(s)</strong> — review below and click Import.`, '#00695C');
+      showPreview();
+    } catch(err) {
+      showStatus('❌ Error reading file: ' + err.message, '#c00');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseSheetToAnswers(rows, sheetName) {
+  const answers = {};
+  // Init all questions to null
+  [...ROB_DIMS, ...TRA_DIMS].forEach(dim => {
+    dim.questions.forEach(q => { answers[q.id] = null; });
+  });
+
+  rows.forEach((row, rowIdx) => {
+    // Column A = row[0] (field name), Column B = row[1] (value)
+    const val = row[1];
+    const isYes = (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim().toLowerCase() !== 'none');
+
+    // Check dual mappings first
+    if (DUAL_MAP[rowIdx]) {
+      DUAL_MAP[rowIdx].forEach(qId => { answers[qId] = isYes; });
+    } else if (ROW_TO_QUESTION[rowIdx]) {
+      answers[ROW_TO_QUESTION[rowIdx]] = isYes;
+    }
+  });
+
+  return answers;
+}
+
+function showStatus(msg, color) {
+  const el = document.getElementById('import-status');
+  el.style.display = 'block';
+  el.style.color = color;
+  el.innerHTML = msg;
+}
+
+function showPreview() {
+  const container = document.getElementById('sheet-list');
+  container.innerHTML = '';
+
+  pendingSheets.forEach((sheet, i) => {
+    // Count yes answers
+    const yesCount = Object.values(sheet.answers).filter(v => v === true).length;
+    const total = Object.values(sheet.answers).length;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7f9fc;border-radius:6px;border:1px solid #dce3ec';
+    row.innerHTML = `
+      <span style="font-size:16px">📄</span>
+      <span style="flex:1;font-weight:bold;font-size:12px">${sheet.name}</span>
+      <span style="font-size:11px;color:#00897B;font-weight:bold">${yesCount} Yes / ${total} questions mapped</span>
+      <input type="text" value="${sheet.name}"
+        style="border:1px solid #ccc;border-radius:4px;padding:3px 8px;font-size:11px;width:160px"
+        oninput="pendingSheets[${i}].name=this.value"
+        placeholder="Tool name" />`;
+    container.appendChild(row);
+  });
+
+  document.getElementById('import-preview').style.display = 'block';
+}
+
+function applyImport() {
+  if (!pendingSheets.length) return;
+
+  pendingSheets.forEach(sheet => {
+    const id = "tool" + (++toolCounter);
+    const color = TOOL_COLORS[(tools.length) % TOOL_COLORS.length];
+    tools.push({ id, name: sheet.name, color, answers: sheet.answers });
+    activeToolId = id;
+  });
+
+  pendingSheets = [];
+  document.getElementById('import-preview').style.display = 'none';
+  showStatus(`✅ Imported successfully — ${tools.length} tool(s) now loaded. Switch to Robustness or Radar Charts tab to view.`, '#00695C');
+
+  renderAll();
+}
+
 // ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
-addTool();
+// Start empty — user imports or adds tools manually
+
 </script>
 </body>
 </html>
