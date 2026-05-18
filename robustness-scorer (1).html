@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robustness Scoring Tool</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f6fa; color: #1a1a2e; font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+header { background: #1a1a2e; color: white; padding: 18px 32px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 18px; font-weight: 600; }
+.badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.b-step { background: rgba(255,255,255,0.15); color: white; margin-left: auto; }
+.b-blue { background: #3a7bd5; color: white; }
+
+.backbar { background: #eef0f8; border-bottom: 1px solid #d0d4e8; padding: 8px 32px; font-size: 12px; }
+.backbar a { color: #3a7bd5; text-decoration: none; }
+
+.layout { display: flex; height: calc(100vh - 95px); }
+
+/* ── Sidebar ── */
+.sb { width: 230px; min-width: 230px; background: white; border-right: 1px solid #d0d4e8; display: flex; flex-direction: column; overflow-y: auto; }
+
+.drop-zone { margin: 14px; border: 2px dashed #c0c8e0; border-radius: 8px; padding: 18px 12px; text-align: center; cursor: pointer; background: #f8f9fd; transition: all 0.2s; }
+.drop-zone:hover, .drop-zone.over { border-color: #3a7bd5; background: #eef4ff; }
+.drop-zone .dz-icon { font-size: 22px; margin-bottom: 6px; }
+.drop-zone strong { font-size: 13px; display: block; }
+.drop-zone p { font-size: 11px; color: #888; margin-top: 3px; }
+#fi { display: none; }
+
+.sbl { padding: 8px 14px 3px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #999; border-top: 1px solid #eef0f8; margin-top: 4px; }
+.si { padding: 7px 14px; cursor: pointer; border-left: 3px solid transparent; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all .15s; }
+.si:hover { background: #f0f4ff; }
+.si.active { border-left-color: #3a7bd5; background: #eef4ff; font-weight: 600; color: #3a7bd5; }
+
+.dni { padding: 5px 14px; cursor: pointer; font-size: 12px; color: #555; display: flex; align-items: center; gap: 7px; transition: background .15s; }
+.dni:hover { background: #f0f4ff; }
+.dn { width: 18px; height: 18px; border-radius: 3px; background: #1a1a2e; color: white; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dns { margin-left: auto; font-family: monospace; font-size: 11px; font-weight: 700; }
+
+/* ── Main ── */
+.main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80%; text-align: center; color: #888; gap: 10px; }
+.empty .ei { font-size: 44px; }
+.empty h2 { font-size: 17px; font-weight: 500; color: #333; }
+.empty p { font-size: 13px; max-width: 400px; }
+.hint-box { background: white; border: 1px solid #d0d4e8; border-radius: 8px; padding: 14px 18px; font-size: 12px; color: #555; margin-top: 4px; text-align: left; max-width: 400px; line-height: 1.8; }
+.hint-box strong { color: #1a1a2e; }
+
+/* Study header */
+.sh { background: white; border: 1px solid #d0d4e8; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; }
+.sh h2 { font-size: 15px; font-weight: 600; margin-bottom: 3px; line-height: 1.4; }
+.sh .meta { font-size: 12px; color: #888; }
+
+.infobar { background: #f0fff4; border: 1px solid #b2dfcc; border-radius: 8px; padding: 10px 16px; margin-bottom: 12px; font-size: 12px; color: #27ae60; display: flex; align-items: center; gap: 8px; }
+.infobar span { color: #555; }
+
+/* Overall score */
+.ov { background: #1a1a2e; color: white; border-radius: 8px; padding: 14px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; }
+.ov-lbl { font-size: 10px; opacity: .55; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+.ov-val { font-size: 28px; font-weight: 300; font-family: monospace; }
+.ov-prog { flex: 1; height: 5px; background: rgba(255,255,255,.2); border-radius: 3px; overflow: hidden; }
+.ov-fill { height: 100%; background: #3a7bd5; border-radius: 3px; transition: width .4s; }
+.ov-note { font-size: 11px; opacity: .45; white-space: nowrap; }
+
+/* Score grid */
+.grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 12px; }
+.tile { background: white; border: 1px solid #d0d4e8; border-radius: 6px; padding: 10px 8px; text-align: center; cursor: pointer; transition: border-color .2s; }
+.tile:hover { border-color: #3a7bd5; }
+.tile-lbl { font-size: 10px; color: #888; line-height: 1.3; margin-bottom: 3px; }
+.tile-val { font-size: 16px; font-weight: 700; font-family: monospace; }
+.tile-bar { height: 3px; background: #eee; border-radius: 2px; margin-top: 5px; }
+.tile-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+
+/* Dimension section */
+.dim-sec { background: white; border: 1px solid #d0d4e8; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.dim-hdr { padding: 12px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; transition: background .15s; }
+.dim-hdr:hover { background: #f8f9fd; }
+.dim-hdr.has-border { border-bottom: 1px solid #eef0f8; }
+.dim-num { width: 26px; height: 26px; border-radius: 5px; background: #1a1a2e; color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dim-hdr h3 { font-size: 13px; font-weight: 600; flex: 1; }
+.dim-sc { font-size: 15px; font-weight: 700; font-family: monospace; min-width: 60px; text-align: right; }
+.chev { color: #bbb; font-size: 10px; transition: transform .2s; margin-left: 6px; }
+.chev.open { transform: rotate(180deg); }
+
+/* Question rows */
+.q-row { padding: 11px 18px; border-bottom: 1px solid #f0f2f8; display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: start; }
+.q-row:last-child { border-bottom: none; }
+.q-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.q-pts { font-size: 11px; color: #bbb; font-family: monospace; margin-bottom: 4px; }
+.q-extracted { font-size: 12px; padding: 6px 9px; border-radius: 5px; border-left: 3px solid #ddd; background: #f5f6fa; color: #999; font-style: italic; line-height: 1.4; word-break: break-word; }
+.q-extracted.filled { color: #1a1a2e; font-style: normal; border-left-color: #3a7bd5; background: #f0f4ff; }
+.q-extracted.empty-val { color: #bbb; }
+
+/* Toggle */
+.tgrp { display: flex; gap: 3px; flex-shrink: 0; }
+.tog { padding: 5px 11px; border-radius: 5px; border: 1px solid #d0d4e8; background: white; font-size: 12px; font-family: monospace; cursor: pointer; color: #bbb; font-weight: 600; transition: all .13s; }
+.tog:hover { border-color: #888; color: #555; }
+.tog.yes { background: #eafaf1; border-color: #27ae60; color: #27ae60; }
+.tog.no  { background: #fdf2f2; border-color: #e74c3c; color: #e74c3c; }
+
+/* Colors */
+.cg { color: #27ae60; }
+.ca { color: #f39c12; }
+.cr { color: #e74c3c; }
+.cm { color: #bbb; }
+
+/* Export button */
+.export-btn { padding: 7px 16px; background: #1a1a2e; color: white; border: none; border-radius: 6px; font-size: 12px; font-family: inherit; cursor: pointer; font-weight: 600; margin-bottom: 12px; }
+.export-btn:hover { opacity: .85; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Robustness Scoring Tool</h1>
+  <span class="badge b-step">Step 2</span>
+  <span class="badge b-blue">10-Dimension Framework</span>
+</header>
+<div class="backbar"><a href="index.html">← Back to Suite Overview</a></div>
+
+<div class="layout">
+  <div class="sb" id="sb">
+    <div class="drop-zone" id="dz">
+      <div class="dz-icon">📂</div>
+      <strong>Upload CSV or Excel</strong>
+      <p>Your extraction table</p>
+      <input type="file" id="fi" accept=".csv,.xlsx,.xls">
+    </div>
+    <div id="study-nav"></div>
+    <div id="dim-nav-wrap" style="display:none">
+      <div class="sbl">Jump to dimension</div>
+      <div id="dim-nav"></div>
+    </div>
+  </div>
+
+  <div class="main" id="main">
+    <div class="empty">
+      <div class="ei">🔬</div>
+      <h2>Upload your extraction file</h2>
+      <p>The tool reads your filled extraction table and automatically scores each study on all 10 robustness dimensions.</p>
+      <div class="hint-box">
+        <strong>How scoring works:</strong><br>
+        ✅ Field has content → <b>Yes</b> (scores points)<br>
+        ❌ Field is empty → <b>No</b> (0 points)<br>
+        🔄 You can flip any item manually after loading
+      </div>
+      <div class="hint-box" style="margin-top:0">
+        <strong>Expected file format:</strong><br>
+        Column A = Field names (row labels)<br>
+        Column B, C, … = One study per column<br>
+        Row 1 = Headers (reviewer/study names)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- xlsx from CDN for Excel support -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// SCORING FRAMEWORK
+// Only the fields that map to robustness dimensions.
+// pts = points if filled. weighted as per framework doc.
+// ═══════════════════════════════════════════════════
+const DIMS = [
+  {
+    id: 1, name: "Data Representativeness & Scope Match",
+    note: "Checks whether intended use, training data, and RCT population are described and comparable.",
+    maxRaw: 13.5,
+    qs: [
+      { id:"d1_01", pts:0.5, text:"Region/Location of Intended Use reported",          field:"Region/Location of Intended Use (Continent, Country, Region, City, Hospital) Extract any information on Intended Use" },
+      { id:"d1_02", pts:0.5, text:"Setting of Intended Use reported",                  field:"Setting of Intended Use (e.g. Unit of Hospital) Extract any information on Intended Use" },
+      { id:"d1_03", pts:0.5, text:"Sex of Target Population specified",                field:"Sex of Target Population Extract any information on Intended Use" },
+      { id:"d1_04", pts:0.5, text:"Race/Ethnicity of Target Population specified",     field:"Race/Ethnicity of Target Population Extract any information on Intended Use" },
+      { id:"d1_05", pts:0.5, text:"Age of Target Population specified",                field:"Age of Target Population Extract any information on Intended Use" },
+      { id:"d1_06", pts:0.5, text:"Mental Health of Target Population specified",      field:"Mental Health of Target Population Extract any information on Intended Use" },
+      { id:"d1_07", pts:0.5, text:"Intended End Users described",                      field:"Intended End Users (e.g. Medical Doctor) Extract any information on Intended Use" },
+      { id:"d1_08", pts:1.0, text:"Restrictions of applicability reported",            field:"Did the RCT study report any restrictions of the applicability of the AI system with respect to the intended use?" },
+      { id:"d1_09", pts:1.0, text:"Dataset origin for training described",             field:"Dataset Origin for Training/Internal Validation" },
+      { id:"d1_10", pts:0.5, text:"Timeframe of training data collection reported",    field:"Timeframe of Data Collection" },
+      { id:"d1_11", pts:0.5, text:"Location of training data collection reported",     field:"Location of Data Collection" },
+      { id:"d1_12", pts:0.5, text:"Setting during training data collection reported",  field:"Setting during Data Collection" },
+      { id:"d1_13", pts:0.5, text:"Sex represented in training dataset",               field:"Sex " },
+      { id:"d1_14", pts:1.0, text:"Race/Ethnicity in training dataset reported",       field:"Race/Ethnicity  " },
+      { id:"d1_15", pts:0.5, text:"Age in training dataset reported",                  field:"Age " },
+      { id:"d1_16", pts:0.5, text:"Mental health in training dataset reported",        field:"Mental Health  " },
+      { id:"d1_17", pts:0.5, text:"SES/employment in training dataset reported",       field:"Socioeconomic Status " },
+      { id:"d1_18", pts:1.0, text:"Similarities/differences study vs training data described", field:"Were any similarities or differences between the study and the training data described?" },
+      { id:"d1_19", pts:1.0, text:"Baseline population characteristics reported",      field:"Baseline Population Characteristics:" },
+      { id:"d1_20", pts:0.5, text:"Country/region of RCT reported",                   field:"Study Location" },
+      { id:"d1_21", pts:0.5, text:"Clinical setting of RCT described",                field:"Setting" },
+      { id:"d1_22", pts:0.5, text:"Language used during RCT reported",                field:"Extract the language(s) in which the tool was used during the RCT." },
+    ]
+  },
+  {
+    id: 2, name: "Data Integrity & Quality",
+    note: "Were training data well-described, cleaned, and was ground truth defined?",
+    maxRaw: 8,
+    critField: "d2_06",
+    qs: [
+      { id:"d2_01", pts:1, text:"Total N in training dataset reported",              field:"Total Number of Individuals Represented in Training Data Set:" },
+      { id:"d2_02", pts:1, text:"Data cleaning steps described",                     field:"Was there a description of data cleaning steps?" },
+      { id:"d2_03", pts:2, text:"Handling of missing values described",              field:"Was the handling of missing values described?" },
+      { id:"d2_04", pts:1, text:"Data imputation or transformation described",       field:"Was the handling of any data imputation or data transformation described?" },
+      { id:"d2_05", pts:1, text:"Other data quality checking steps described",       field:"Were any other data quality checking or preprocessing steps described?" },
+      { id:"d2_06", pts:2, text:"Ground truth establishment described",              field:"How was ground truth established? " },
+    ]
+  },
+  {
+    id: 3, name: "Initial Development",
+    note: "Was the model built with sound methodology (algorithm, architecture, splitting)?",
+    maxRaw: 7,
+    critField: "d3_04",
+    qs: [
+      { id:"d3_01", pts:1, text:"Type of algorithm described",                       field:"What type of algorithm or base model is used?" },
+      { id:"d3_02", pts:1, text:"Rationale for choice of algorithm described",       field:"Was the rationale for the choice of the algorithm described?" },
+      { id:"d3_03", pts:1, text:"Architecture described",                            field:"Was the architecture described?" },
+      { id:"d3_04", pts:1, text:"Method of data splitting described",                field:"Was the method of datasplitting described?" },
+      { id:"d3_05", pts:1, text:"Method of resampling described",                   field:"Was the method of resampling described?" },
+      { id:"d3_06", pts:1, text:"Optimization method described",                    field:"Was the optimization method described?" },
+      { id:"d3_07", pts:1, text:"Hyperparameter optimization performed",             field:"Was hyperparameter optimization performed?" },
+    ]
+  },
+  {
+    id: 4, name: "Internal Validation",
+    note: "Was performance on held-out data reported with appropriate metrics and precision?",
+    maxRaw: 6,
+    critField: "d4_01",
+    qs: [
+      { id:"d4_01", pts:2, text:"Performance metrics for internal validation reported",   field:"What were the seleted performance metrics?" },
+      { id:"d4_02", pts:1, text:"Rationale for selected metrics described",              field:"Was there a rationale / justification for the selected metrics?" },
+      { id:"d4_03", pts:2, text:"Internal validation results with confidence intervals", field:"Are all results specified with confidence intervals?" },
+      { id:"d4_04", pts:1, text:"Additional robustness information reported",            field:"Any additional information that may be relevant to the robustness assessment:" },
+    ]
+  },
+  {
+    id: 5, name: "Retrospective External Validation",
+    note: "Was the model tested on an independent historical dataset from a different source?",
+    maxRaw: 11,
+    gateField: "d5_00",
+    qs: [
+      { id:"d5_00", pts:4, text:"Retrospective external validation conducted (GATE)", field:"Pro- and/or Retrospective External Validation", isGate: true },
+      { id:"d5_01", pts:1, text:"External validation dataset origin described",       field:"Dataset Origin " },
+      { id:"d5_02", pts:0.5, text:"Timeframe of ext. validation data reported",      field:"Timeframe of Data Collection " },
+      { id:"d5_03", pts:0.5, text:"Location of ext. validation data reported",       field:"Region/Location of Data Collection " },
+      { id:"d5_04", pts:0.5, text:"Setting of ext. validation reported",             field:"Setting during Data Collection " },
+      { id:"d5_05", pts:0.5, text:"Race/Ethnicity in ext. validation dataset",       field:"Race/Ethnicity  .4" },
+      { id:"d5_06", pts:2,   text:"Performance metrics for ext. validation reported",field:"Extract the Overall Performance Results for testing on this Dataset" },
+      { id:"d5_07", pts:1,   text:"Ext. validation results with confidence intervals",field:"Are all results specified with confidence intervals?.2" },
+      { id:"d5_08", pts:0.5, text:"Rationale for overall testing strategy",          field:"Was there a rationale / justification for the overall testing strategy?" },
+      { id:"d5_09", pts:0.5, text:"Ground truth for ext. validation described",      field:"How was ground truth established?" },
+    ]
+  },
+  {
+    id: 6, name: "Prospective External Validation",
+    note: "Was the model tested in a real deployment context on new patients (incl. RCTs)?",
+    maxRaw: 7,
+    gateField: "d6_00",
+    qs: [
+      { id:"d6_00", pts:4, text:"Prospective external validation / RCT conducted (GATE)", field:"Which type of Randomized study is this?", isGate: true },
+      { id:"d6_01", pts:1, text:"Prospective validation demographics reported",     field:"Genders of Study Population Overall" },
+      { id:"d6_02", pts:1, text:"Performance metrics for prospective validation",   field:"Extract the Overall Performance Results" },
+      { id:"d6_03", pts:1, text:"Prospective validation results with CIs",          field:"Are all results specified with confidence intervals?" },
+    ]
+  },
+  {
+    id: 7, name: "Subgroup & Fairness Testing",
+    note: "Was performance actively tested across demographic and clinical subgroups?",
+    maxRaw: 10,
+    qs: [
+      { id:"d7_01", pts:0.5, text:"Performance tested across sexes",                field:"Sexes? Extract:" },
+      { id:"d7_02", pts:1.0, text:"Performance tested across race/ethnicities",     field:"Race/Ethnicities? Extract:" },
+      { id:"d7_03", pts:0.5, text:"Performance tested across age groups",           field:"Ages? Extract:" },
+      { id:"d7_04", pts:1.0, text:"Performance tested across clinical groups",      field:"Clinical groups? Extract:" },
+      { id:"d7_05", pts:0.5, text:"Performance tested across locations/sites",      field:"Locations? Extract:" },
+      { id:"d7_06", pts:0.5, text:"Performance tested across timespans",            field:"Timespans? Extract:" },
+      { id:"d7_07", pts:1.0, text:"Intersectionality considered",                  field:"Did the study look at how belonging to more than one group at the same time (for example, age and gender together) affected the results?" },
+      { id:"d7_08", pts:1.0, text:"Consistencies/inconsistencies across groups described", field:"Was evidence provided for any consistencies or inconsistencies of performance across groups?" },
+      { id:"d7_09", pts:2.0, text:"Formal fairness assessment or bias prevention reported", field:"Was any fairness assessment reported or measures taken to prevent bias?" },
+      { id:"d7_10", pts:1.0, text:"Prediction errors analysed to identify vulnerable subgroups", field:"Were prediction errors analyzed to identify characteristics that are more prone to inaccurate predictions?" },
+    ]
+  },
+  {
+    id: 8, name: "Deployment & Operational Stability",
+    note: "Was the tool designed and documented for real-world deployment variability?",
+    maxRaw: 10,
+    qs: [
+      { id:"d8_01", pts:1.0, text:"Decision threshold addressed",                   field:"Does the AI system require the user to select a decision threshold?" },
+      { id:"d8_02", pts:1.0, text:"Uncertainty scores displayed on UX",             field:"Was there uncertainty scores about the prediction displayed on the UX?" },
+      { id:"d8_03", pts:1.0, text:"Escalation channel to humans in place",          field:"Was a function allocation, which provides appropriate escalation channels to humans, in place?" },
+      { id:"d8_04", pts:1.0, text:"System can detect and adapt to varying environments", field:"Is the system able to detect varying environments so that it can adapt its behaviour?" },
+      { id:"d8_05", pts:1.0, text:"Autonomy level during RCT described",            field:"Levels of Autonomy of Tool during Study Conduct" },
+      { id:"d8_06", pts:0.5, text:"Device used during study described",             field:"Device used during study" },
+      { id:"d8_07", pts:1.0, text:"Technical integration during study described",   field:"Technical Integration during Study:" },
+      { id:"d8_08", pts:0.5, text:"End-user type during study described",           field:"End-Users during Study" },
+      { id:"d8_09", pts:1.0, text:"End-user training/expertise described",          field:"End-User Characteristics " },
+      { id:"d8_10", pts:1.0, text:"Outcome blinding or bias prevention described",  field:"Were any actions to blind assessment of the outcome reported?" },
+      { id:"d8_11", pts:0.5, text:"Performance tested across settings",             field:"Settings? Extract:" },
+      { id:"d8_12", pts:0.5, text:"Performance tested across devices/platforms",    field:"Devices? Extract:" },
+    ]
+  },
+  {
+    id: 9, name: "Stress-Testing & Sensitivity",
+    note: "Were the model's limits actively probed through sensitivity analyses?",
+    maxRaw: 9,
+    qs: [
+      { id:"d9_01", pts:1, text:"Cross-study performance comparison described",     field:"Were any similarities or differences in performance between different studies on the tool described?" },
+      { id:"d9_02", pts:1, text:"Different training strategies investigated",       field:"Did the study investigate how different training strategies (e.g. pretraining) affects the performance?" },
+      { id:"d9_03", pts:1, text:"Hyperparameter sensitivity investigated",          field:"Did the study investigate how different parameterization (e.g. hyperparameter-tuning or hyperparameter-optimization) affects the performance?" },
+      { id:"d9_04", pts:1, text:"Data missingness impact investigated",             field:"Did the study investigate how data missingness affects the performance?" },
+      { id:"d9_05", pts:1, text:"Data balancing effects investigated",              field:"Did the study investigate if data balancing affects the performance?" },
+      { id:"d9_06", pts:1, text:"Other robustness methods mentioned",               field:"Was any other robustness/generalizability method or efforts mentioned?" },
+      { id:"d9_07", pts:1, text:"Performance limitations explicitly reported",      field:"Were performance limitations reported?" },
+      { id:"d9_08", pts:1, text:"Robustness claims with justification",             field:"Did the authors make claims about the tools robustness?" },
+      { id:"d9_09", pts:1, text:"Adverse events recorded and analysed",             field:"Did the study record or analyse adverse events?" },
+    ]
+  },
+  {
+    id: 10, name: "Construct Validity",
+    note: "Is the tool conceptually grounded — are features, target, and model-task fit justified?",
+    maxRaw: 10,
+    qs: [
+      { id:"d10_01", pts:1, text:"Justification of output's relevance to downstream task", field:"Was there a justification of the outputs' relevance to the downstream task?" },
+      { id:"d10_02", pts:1, text:"Theoretical framework described",                        field:"What theoretical framework from psychology was the model based on?" },
+      { id:"d10_03", pts:2, text:"Features claimed appropriate for condition",             field:"Do the authors claim that the features are appropriately suited to predict the specific mental health condition being addressed?" },
+      { id:"d10_04", pts:2, text:"Prediction target claimed appropriate",                  field:"Do the authors claim that their prediction target is appropriately designed to capture the specific mental health condition being addressed?" },
+      { id:"d10_05", pts:2, text:"Model claimed to capture feature-target relationship",   field:"Do the authors claim that the chosen model effectively captures the relationship between the features and the target?" },
+      { id:"d10_06", pts:2, text:"External scientific research supporting tool logic cited",field:"Was there any other external scientific research supporting the assumptions behind the tool's logic?" },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let studies = [];
+let activeStudy = null;
+let scores = {};      // { studyName: { qid: 0 or 1 } }
+let openDims = {};    // { studyName_dimid: bool }
+
+// ═══════════════════════════════════════
+// FILE PARSING
+// ═══════════════════════════════════════
+function handleFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const r = new FileReader();
+    r.onload = e => loadMatrix(csvToMatrix(e.target.result));
+    r.readAsText(file);
+  } else {
+    const r = new FileReader();
+    r.onload = e => {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      loadMatrix(XLSX.utils.sheet_to_array(ws, {defval:''}));
+    };
+    r.readAsArrayBuffer(file);
+  }
+}
+
+function csvToMatrix(text) {
+  const rows = []; let row = []; let cell = ''; let inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { row.push(cell); cell = ''; }
+    else if ((c === '\n' || c === '\r') && !inQ) {
+      row.push(cell); rows.push(row); row = []; cell = '';
+      if (c === '\r' && text[i+1] === '\n') i++;
+    } else { cell += c; }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.map(r => r.map(c => String(c).replace(/^"|"$/g,'').replace(/""/g,'"').trim()));
+}
+
+function loadMatrix(matrix) {
+  if (!matrix || matrix.length < 2) { alert('Could not parse file — check format.'); return; }
+  const headers = matrix[0].map(h => String(h).trim());
+  // col 0 = field labels, col 1..N = studies
+  const studyNames = headers.slice(1).filter(Boolean);
+  studies = [];
+  for (let si = 0; si < studyNames.length; si++) {
+    const fields = {};
+    for (let ri = 1; ri < matrix.length; ri++) {
+      const fname = String(matrix[ri][0] || '').trim();
+      const val   = String(matrix[ri][si + 1] || '').trim();
+      if (fname) fields[fname] = val;
+    }
+    const title = fields['Title.1'] || fields['Title'] || studyNames[si];
+    studies.push({ name: studyNames[si], title, fields });
+  }
+  // Auto-score all studies
+  for (const s of studies) autoScore(s);
+  activeStudy = studies[0];
+  renderSidebar();
+  renderStudy(activeStudy);
+}
+
+// ═══════════════════════════════════════
+// FIELD LOOKUP — tries exact, then case-insensitive, then prefix
+// ═══════════════════════════════════════
+function getField(study, fieldName) {
+  if (!fieldName) return '';
+  // exact
+  if (study.fields[fieldName] !== undefined) return study.fields[fieldName];
+  // case-insensitive exact
+  const lf = fieldName.toLowerCase().trim();
+  for (const [k,v] of Object.entries(study.fields)) {
+    if (k.toLowerCase().trim() === lf) return v;
+  }
+  // prefix (first 35 chars)
+  const short = lf.substring(0, 35);
+  for (const [k,v] of Object.entries(study.fields)) {
+    if (k.toLowerCase().trim().startsWith(short)) return v;
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════
+// AUTO-SCORING: filled = 1, empty = 0
+// ═══════════════════════════════════════
+function isFilled(val) {
+  if (!val || val.trim() === '') return false;
+  const v = val.trim().toLowerCase();
+  // treat explicit negatives as empty
+  const neg = ['no','none','n/a','na','not reported','not described','not applicable','not mentioned','-'];
+  if (neg.includes(v)) return false;
+  return true;
+}
+
+function autoScore(study) {
+  const sn = study.name;
+  if (!scores[sn]) scores[sn] = {};
+  for (const dim of DIMS) {
+    for (const q of dim.qs) {
+      if (scores[sn][q.id] === undefined) {
+        const val = getField(study, q.field);
+        scores[sn][q.id] = isFilled(val) ? 1 : 0;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// SCORE CALCULATION
+// ═══════════════════════════════════════
+function calcDim(sn, dim) {
+  const get = id => scores[sn]?.[id] ?? 0;
+
+  if (dim.gateField) {
+    const gv = get(dim.gateField);
+    if (gv === 0) return 0;
+    // gate passed → score quality items only
+    let sum = 0, max = 0;
+    for (const q of dim.qs.filter(q => !q.isGate)) {
+      sum += get(q.id) * q.pts;
+      max += q.pts;
+    }
+    return max === 0 ? 10 : (sum / max) * 10;
+  }
+
+  let sum = 0;
+  for (const q of dim.qs) sum += get(q.id) * q.pts;
+  let sc = (sum / dim.maxRaw) * 10;
+
+  // critical field cap: if critical field = 0 → cap at 4
+  if (dim.critField && get(dim.critField) === 0) sc = Math.min(sc, 4);
+  return Math.min(10, sc);
+}
+
+function calcOverall(sn) {
+  const vals = DIMS.map(d => calcDim(sn, d));
+  return vals.reduce((a,b)=>a+b,0) / vals.length;
+}
+
+// ═══════════════════════════════════════
+// COLOR HELPERS
+// ═══════════════════════════════════════
+function scColor(sc) {
+  if (sc === null) return 'cm';
+  if (sc >= 7) return 'cg';
+  if (sc >= 4) return 'ca';
+  return 'cr';
+}
+function barColor(sc) {
+  if (sc >= 7) return '#27ae60';
+  if (sc >= 4) return '#f39c12';
+  return '#e74c3c';
+}
+
+// ═══════════════════════════════════════
+// RENDER SIDEBAR
+// ═══════════════════════════════════════
+function renderSidebar() {
+  const nav = document.getElementById('study-nav');
+  const dnw = document.getElementById('dim-nav-wrap');
+  if (!studies.length) { nav.innerHTML=''; dnw.style.display='none'; return; }
+
+  nav.innerHTML = `<div class="sbl">Studies (${studies.length})</div>` +
+    studies.map(s =>
+      `<div class="si${activeStudy?.name===s.name?' active':''}" onclick="selectStudy('${esc(s.name)}')">${s.name}</div>`
+    ).join('');
+
+  dnw.style.display = 'block';
+  document.getElementById('dim-nav').innerHTML = DIMS.map(d => {
+    const sc = calcDim(activeStudy.name, d);
+    return `<div class="dni" onclick="document.getElementById('ds${d.id}').scrollIntoView({behavior:'smooth'})">
+      <div class="dn">${d.id}</div>
+      <span>D${d.id}</span>
+      <span class="dns ${scColor(sc)}">${sc.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) { return s.replace(/'/g, "\\'"); }
+
+function selectStudy(name) {
+  activeStudy = studies.find(s => s.name === name);
+  renderSidebar();
+  renderStudy(activeStudy);
+}
+
+// ═══════════════════════════════════════
+// RENDER STUDY
+// ═══════════════════════════════════════
+function renderStudy(study) {
+  if (!study) return;
+  const sn = study.name;
+  const overall = calcOverall(sn);
+  const yesCount = Object.values(scores[sn]||{}).filter(v=>v===1).length;
+  const totalQ = DIMS.reduce((a,d)=>a+d.qs.length,0);
+
+  let h = '';
+
+  // Study header
+  h += `<div class="sh">
+    <h2>${study.title}</h2>
+    <div class="meta">${sn} &nbsp;·&nbsp; ${study.fields['Date of Publication']||''} &nbsp;·&nbsp; ${study.fields['Study Location']||''}</div>
+  </div>`;
+
+  // Info bar
+  h += `<div class="infobar">✅ Auto-scored from uploaded data &nbsp;
+    <span>${yesCount} of ${totalQ} robustness items present &nbsp;·&nbsp; Click Yes/No to override any item</span>
+  </div>`;
+
+  // Overall
+  h += `<div class="ov">
+    <div><div class="ov-lbl">Overall Robustness Score</div>
+      <div class="ov-val" id="ov-val">${overall.toFixed(1)}<span style="font-size:16px;opacity:.4"> / 10</span></div>
+    </div>
+    <div class="ov-prog"><div class="ov-fill" id="ov-fill" style="width:${overall*10}%"></div></div>
+    <div class="ov-note">Mean across 10 dimensions</div>
+  </div>`;
+
+  // Score grid
+  h += `<div class="grid">`;
+  for (const d of DIMS) {
+    const sc = calcDim(sn, d);
+    h += `<div class="tile" onclick="document.getElementById('ds${d.id}').scrollIntoView({behavior:'smooth'})">
+      <div class="tile-lbl">D${d.id} ${d.name.split(' ').slice(0,2).join(' ')}</div>
+      <div class="tile-val ${scColor(sc)}" id="tv${d.id}">${sc.toFixed(1)}</div>
+      <div class="tile-bar"><div class="tile-fill" id="tf${d.id}" style="width:${sc*10}%;background:${barColor(sc)}"></div></div>
+    </div>`;
+  }
+  h += `</div>`;
+
+  // Dimensions
+  for (const d of DIMS) {
+    const key = `${sn}_${d.id}`;
+    const open = openDims[key] !== false;
+    const sc = calcDim(sn, d);
+
+    h += `<div class="dim-sec" id="ds${d.id}">
+      <div class="dim-hdr${open?' has-border':''}" onclick="toggleDim('${key}','${d.id}',this)">
+        <div class="dim-num">${d.id}</div>
+        <h3>${d.name}</h3>
+        <span class="dim-sc ${scColor(sc)}" id="dsc${d.id}">${sc.toFixed(1)} / 10</span>
+        <span class="chev${open?' open':''}">▼</span>
+      </div>`;
+
+    if (open) {
+      // Dimension note
+      h += `<div style="padding:8px 18px 0;font-size:12px;color:#888;font-style:italic">${d.note}</div>`;
+
+      // Gate notice
+      if (d.gateField) {
+        const gv = scores[sn]?.[d.gateField] ?? 0;
+        if (gv === 0) h += `<div style="padding:10px 18px;font-size:12px;background:#fff5f5;color:#c0392b;border-top:1px solid #eee;margin-top:8px">🔒 Gate item not present — dimension scores 0/10. If this study IS this validation type, flip the gate item to Yes.</div>`;
+        else          h += `<div style="padding:10px 18px;font-size:12px;background:#f0fff4;color:#27ae60;border-top:1px solid #eee;margin-top:8px">✓ Gate present — scoring quality items below</div>`;
+      }
+
+      // Questions
+      h += `<div style="margin-top:8px">`;
+      for (const q of d.qs) {
+        const val = getField(study, q.field);
+        const sc  = scores[sn]?.[q.id] ?? 0;
+        const filled = sc === 1;
+        const display = val && val.trim() ? val.substring(0,350)+(val.length>350?'…':'') : '(empty in extraction table)';
+
+        h += `<div class="q-row" id="qr_${q.id}">
+          <div>
+            <div class="q-title">${q.text}${q.isGate?' <span style="font-size:10px;color:#e74c3c;font-weight:700">GATE</span>':''}</div>
+            <div class="q-pts">${q.pts} pt${q.pts!==1?'s':''} · field: <em>${q.field.substring(0,60)}</em></div>
+            <div class="q-extracted${filled?' filled':' empty-val'}">${display}</div>
+          </div>
+          <div class="tgrp">
+            <button class="tog${filled?' yes':''}" onclick="setScore('${sn}','${q.id}',1,this)">Yes</button>
+            <button class="tog${!filled?' no':''}"  onclick="setScore('${sn}','${q.id}',0,this)">No</button>
+          </div>
+        </div>`;
+      }
+      h += `</div>`;
+    }
+
+    h += `</div>`;
+  }
+
+  document.getElementById('main').innerHTML = h;
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════
+function toggleDim(key, dimId, hdrEl) {
+  const open = openDims[key] !== false;
+  openDims[key] = !open;
+  // full re-render keeps it simple and correct
+  renderStudy(activeStudy);
+  setTimeout(() => document.getElementById('ds'+dimId)?.scrollIntoView({behavior:'smooth', block:'nearest'}), 30);
+}
+
+function setScore(sn, qid, val, btn) {
+  scores[sn][qid] = val;
+
+  // update just the buttons in this row
+  const row = document.getElementById('qr_' + qid);
+  if (row) {
+    row.querySelectorAll('.tog').forEach(b => b.className = 'tog');
+    btn.classList.add(val === 1 ? 'yes' : 'no');
+    // update extracted field style
+    const ext = row.querySelector('.q-extracted');
+    if (ext) { ext.className = 'q-extracted' + (val===1?' filled':' empty-val'); }
+  }
+
+  // update scores without full re-render
+  updateScoreDisplays(sn);
+}
+
+function updateScoreDisplays(sn) {
+  const overall = calcOverall(sn);
+
+  const ovVal  = document.getElementById('ov-val');
+  const ovFill = document.getElementById('ov-fill');
+  if (ovVal)  ovVal.innerHTML  = `${overall.toFixed(1)}<span style="font-size:16px;opacity:.4"> / 10</span>`;
+  if (ovFill) ovFill.style.width = `${overall*10}%`;
+
+  for (const d of DIMS) {
+    const sc = calcDim(sn, d);
+    const tv = document.getElementById('tv'+d.id);
+    const tf = document.getElementById('tf'+d.id);
+    const ds = document.getElementById('dsc'+d.id);
+    const dn = document.querySelector(`.dni:nth-child(${d.id}) .dns`);
+
+    if (tv) { tv.textContent = sc.toFixed(1); tv.className = `tile-val ${scColor(sc)}`; }
+    if (tf) { tf.style.width = `${sc*10}%`; tf.style.background = barColor(sc); }
+    if (ds) { ds.textContent = `${sc.toFixed(1)} / 10`; ds.className = `dim-sc ${scColor(sc)}`; }
+  }
+
+  // re-render sidebar nav scores
+  document.getElementById('dim-nav').innerHTML = DIMS.map(d => {
+    const sc = calcDim(sn, d);
+    return `<div class="dni" onclick="document.getElementById('ds${d.id}').scrollIntoView({behavior:'smooth'})">
+      <div class="dn">${d.id}</div>
+      <span>D${d.id}</span>
+      <span class="dns ${scColor(sc)}">${sc.toFixed(1)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// FILE INPUT EVENTS
+// ═══════════════════════════════════════
+const dz = document.getElementById('dz');
+const fi = document.getElementById('fi');
+dz.onclick = () => fi.click();
+fi.onchange = e => { if (e.target.files[0]) handleFile(e.target.files[0]); };
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+dz.ondragleave = () => dz.classList.remove('over');
+dz.ondrop = e => {
+  e.preventDefault(); dz.classList.remove('over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+};
+</script>
+</body>
+</html>
