@@ -3,370 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> Medical AI — Robustness Review Suite</title>
+<title>Medical AI Robustness Review — Tool Suite</title>
 <style>
-  /* ── RESET & BASE ── */
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: Arial, sans-serif;
-    background: #f0f3f7;
-    color: #222;
-    min-height: 100vh;
-  }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#f0f3f7;color:#222;min-height:100vh;}
 
-  /* ── HEADER ── */
-  header {
-    background: #1F4E79;
-    color: white;
-    padding: 32px 40px 24px;
-  }
-  header h1 { font-size: 24px; margin-bottom: 6px; }
-  header p  { font-size: 14px; opacity: 0.8; max-width: 640px; line-height: 1.5; }
+.hero{background:#1F4E79;color:white;padding:40px 40px 32px;}
+.hero h1{font-size:22px;font-weight:bold;margin-bottom:6px;}
+.hero p{font-size:13px;opacity:.75;max-width:680px;line-height:1.6;}
+.hero .meta{font-size:11px;opacity:.5;margin-top:12px;}
 
-  /* ── WORKFLOW STEPS ── */
-  .workflow {
-    background: #163d5e;
-    padding: 14px 40px;
-    display: flex;
-    gap: 0;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255,255,255,0.85);
-    font-size: 12px;
-  }
-  .step-num {
-    background: rgba(255,255,255,0.2);
-    border-radius: 50%;
-    width: 22px; height: 22px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; font-size: 11px; flex-shrink: 0;
-  }
-  .step-arrow { color: rgba(255,255,255,0.35); margin: 0 12px; font-size: 16px; }
+.body{padding:32px 40px;max-width:900px;}
 
-  /* ── MAIN CONTENT ── */
-  main { padding: 32px 40px; max-width: 1100px; }
+.section-label{font-size:11px;font-weight:bold;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-bottom:12px;margin-top:32px;}
+.section-label:first-child{margin-top:0;}
 
-  /* ── SECTION HEADERS ── */
-  .section-label {
-    font-size: 11px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #888;
-    margin-bottom: 12px;
-    margin-top: 28px;
-  }
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px;}
+.card{background:white;border-radius:8px;border:1px solid #dce3ec;padding:18px 20px;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:box-shadow .15s, border-color .15s;}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);border-color:#aac;}
+.card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;}
+.card-icon{font-size:24px;flex-shrink:0;margin-top:2px;}
+.card-title{font-size:14px;font-weight:bold;color:#1F4E79;}
+.card-type{font-size:10px;font-weight:bold;padding:2px 7px;border-radius:8px;margin-top:3px;display:inline-block;}
+.tag-model{background:#DEEAF1;color:#1F4E79;}
+.tag-chatbot{background:#E0F2F1;color:#00695C;}
+.tag-ref{background:#F4ECF7;color:#6C3483;}
+.tag-util{background:#FFF2CC;color:#7D6000;}
+.card-desc{font-size:12px;color:#555;line-height:1.5;flex:1;}
+.card-dims{font-size:11px;color:#888;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;}
 
-  /* ── TOOL CARDS ── */
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-    margin-bottom: 8px;
-  }
+.note{background:#FFF8E1;border:1px solid #FFD700;border-radius:6px;padding:10px 14px;font-size:12px;color:#7D6000;margin-top:20px;line-height:1.5;}
+.note a{color:#7D6000;}
 
-  .card {
-    background: white;
-    border-radius: 10px;
-    border: 1px solid #dce3ec;
-    padding: 20px;
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: box-shadow 0.15s, border-color 0.15s;
-    cursor: pointer;
-  }
-  .card:hover {
-    box-shadow: 0 4px 16px rgba(31,78,121,0.12);
-    border-color: #2E74B5;
-  }
+footer{padding:24px 40px;font-size:11px;color:#aaa;border-top:1px solid #e0e0e0;margin-top:12px;}
 
-  .card-header { display: flex; align-items: flex-start; gap: 12px; }
-  .card-icon {
-    font-size: 24px;
-    width: 44px; height: 44px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .card-title { font-size: 15px; font-weight: bold; color: #1F4E79; line-height: 1.3; }
-  .card-file  { font-size: 10px; color: #aaa; margin-top: 2px; font-family: monospace; }
-  .card-desc  { font-size: 12px; color: #555; line-height: 1.6; }
-
-  .card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
-  .tag {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: bold;
-  }
-  .tag-blue   { background: #DEEAF1; color: #1F4E79; }
-  .tag-orange { background: #FDE9D9; color: #B8471A; }
-  .tag-green  { background: #E2EFDA; color: #375623; }
-  .tag-grey   { background: #F2F2F2; color: #555; }
-
-  .card-action {
-    margin-top: auto;
-    padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
-    font-size: 12px;
-    font-weight: bold;
-    color: #2E74B5;
-  }
-  .card-action::after { content: " →"; }
-
-  /* ── WORD DOCS SECTION ── */
-  .doc-list { display: flex; flex-direction: column; gap: 8px; }
-  .doc-row {
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #dce3ec;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .doc-icon { font-size: 20px; flex-shrink: 0; }
-  .doc-name { font-size: 13px; font-weight: bold; color: #1F4E79; }
-  .doc-desc { font-size: 12px; color: #777; }
-
-  /* ── FOOTER ── */
-  footer {
-    margin-top: 40px;
-    padding: 20px 40px;
-    background: white;
-    border-top: 1px solid #dce3ec;
-    font-size: 11px;
-    color: #aaa;
-  }
+@media(max-width:640px){.cards{grid-template-columns:1fr;}.body,.hero{padding:20px;}}
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ── -->
-<header>
-  <h1> Medical AI — Robustness &amp; Transparency Review Suite</h1>
-  <p>A set of tools for a study-based robustness assessment of medical AI tools. Covers study mapping, robustness scoring, performance comparison across datasets and synthesis of these outcomes across studies.</p>
-</header>
-
-<!-- ── WORKFLOW BAR ── -->
-<div class="workflow">
-  <div class="step">
-    <div class="step-num">1</div>
-    Map your tools &amp; studies
-  </div>
-  <div class="step-arrow">›</div>
-  <div class="step">
-    <div class="step-num">2</div>
-    Score robustness &amp; transparency
-  </div>
-  <div class="step-arrow">›</div>
-  <div class="step">
-    <div class="step-num">3</div>
-    Visualise profiles
-  </div>
-  <div class="step-arrow">›</div>
-  <div class="step">
-    <div class="step-num">4</div>
-    Summarise per tool
-  </div>
+<div class="hero">
+  <h1>Medical AI Robustness Review — Tool Suite</h1>
+  <p>Systematic review tools for assessing the robustness of AI-based clinical decision support tools in mental health RCTs. Scoring framework across 10 dimensions (prediction models) or 6 dimensions (chatbots).</p>
+  <div class="meta">All tools run in-browser · No server required · Import your codebook Excel to score</div>
 </div>
 
-<!-- ── MAIN ── -->
-<main>
+<div class="body">
 
-  <div class="section-label">Interactive browser tools — click to open</div>
+  <div class="section-label">Scoring Tools</div>
   <div class="cards">
 
-    <!-- Tool 1: Review Overview -->
-    <a class="card" href="review-overview.html">
-      <div class="card-header">
-        <div class="card-icon" style="background:#EBF3FB">📋</div>
+    <a class="card" href="scoring-tool-models.html">
+      <div class="card-top">
+        <div class="card-icon">📊</div>
         <div>
-          <div class="card-title">Review Overview</div>
-          <div class="card-file">review-overview.html</div>
+          <div class="card-title">Prediction Model Scoring</div>
+          <span class="card-type tag-model">Prediction models</span>
         </div>
       </div>
-      <div class="card-desc">
-        Map all tools in your review and their associated studies (RCTs and precursors).
-        Enter study name, type, year, country, and sample size. Generates a live overview
-        table with per-tool summaries and grand totals. Export as CSV.
-      </div>
-      <div class="card-tags">
-        <span class="tag tag-blue">Step 1</span>
-        <span class="tag tag-grey">Study mapping</span>
-        <span class="tag tag-grey">CSV export</span>
-      </div>
-      <div class="card-action">Open tool</div>
+      <div class="card-desc">Full robustness scoring for ML-based prediction and classification tools. Import your codebook Excel, score interactively, and export a radar chart.</div>
+      <div class="card-dims">10 dimensions · D1–D10 · Weighted questions · Gated D5/D6</div>
     </a>
 
-    <!-- Tool 2: Scoring Tool -->
-    <a class="card" href="scoring-tool.html">
-      <div class="card-header">
-        <div class="card-icon" style="background:#FDEDED">📉</div>
+    <a class="card" href="scoring-tool-chatbots.html">
+      <div class="card-top">
+        <div class="card-icon">💬</div>
         <div>
-          <div class="card-title">Scoring Tool</div>
-          <div class="card-file">scoring-tool.html</div>
+          <div class="card-title">Chatbot Scoring</div>
+          <span class="card-type tag-chatbot">Chatbots</span>
         </div>
       </div>
-      <div class="card-desc">
-        Score the tool following the extraction code book.
-      </div>
-      <div class="card-tags">
-        <span class="tag tag-blue">Step 4</span>
-        <span class="tag tag-green">Validation</span>
-        <span class="tag tag-grey">Drop detection</span>
-        <span class="tag tag-grey">PNG export</span>
-      </div>
-      <div class="card-action">Open tool</div>
+      <div class="card-desc">Robustness scoring adapted for conversational AI tools. D2 (data quality), D4 (internal validation), and D5 (retrospective validation) are excluded as non-applicable. D3 uses chatbot-specific questions.</div>
+      <div class="card-dims">6 dimensions · D1, D3, D6, D7, D8, D9, D10 · Chatbot D3 &amp; D10 variants</div>
     </a>
 
-     <!-- Tool 3: Validation Cascade -->
+  </div>
+
+  <div class="section-label">Reference &amp; Analysis</div>
+  <div class="cards">
+
+    <a class="card" href="scoring-mapping.html">
+      <div class="card-top">
+        <div class="card-icon">🗺️</div>
+        <div>
+          <div class="card-title">Excel Row → Scoring Mapping</div>
+          <span class="card-type tag-ref">Reference</span>
+        </div>
+      </div>
+      <div class="card-desc">Complete reference table showing every codebook Excel row, the field name it contains, which dimension it feeds, how many points it earns, and any special scoring rules. Filter by dimension or search by field name.</div>
+      <div class="card-dims">104 rows mapped · Dual-mapped rows · Gate &amp; cap annotations</div>
+    </a>
+
+    <a class="card" href="population-comparison.html">
+      <div class="card-top">
+        <div class="card-icon">👥</div>
+        <div>
+          <div class="card-title">Population Scope Match</div>
+          <span class="card-type tag-util">D1 support</span>
+        </div>
+      </div>
+      <div class="card-desc">Side-by-side comparison of intended use population, RCT population, and training data demographics. Upload your codebook Excel and optional baseline characteristics file. Feeds directly into the D1 mismatch adjuster.</div>
+      <div class="card-dims">Intended use · RCT population · Training data · Mismatch adjuster</div>
+    </a>
+
+  </div>
+
+  <div class="section-label">Other Tools</div>
+  <div class="cards">
+
     <a class="card" href="Validation_Cascade.html">
-      <div class="card-header">
-        <div class="card-icon" style="background:#FDEDED">📉</div>
+      <div class="card-top">
+        <div class="card-icon">🔬</div>
         <div>
           <div class="card-title">Validation Cascade</div>
-          <div class="card-file">Validation_Cascade.html</div>
+          <span class="card-type tag-ref">Visualisation</span>
         </div>
       </div>
-      <div class="card-desc">
-        Track model performance across all 5 validation steps — training set, internal test,
-        retrospective external, prospective external, and RCT. Automatically flags where
-        performance drops between steps. Compare multiple tools side by side.
-      </div>
-      <div class="card-tags">
-        <span class="tag tag-blue">Step 4</span>
-        <span class="tag tag-green">Validation</span>
-        <span class="tag tag-grey">Drop detection</span>
-        <span class="tag tag-grey">PNG export</span>
-      </div>
-      <div class="card-action">Open tool</div>
-    </a>
-
-
-    <!-- Tool 4: Radar Chart -->
-    <a class="card" href="radar-chart.html">
-      <div class="card-header">
-        <div class="card-icon" style="background:#FDE9D9">🕸️</div>
-        <div>
-          <div class="card-title">Robustness &amp; Transparency Radar</div>
-          <div class="card-file">radar-chart.html</div>
-        </div>
-      </div>
-      <div class="card-desc">
-        Enter dimension % scores (from the scoring sheet) for each study or tool.
-        Generates two side-by-side radar charts — one for robustness, one for transparency.
-        Compare multiple studies or tools. Export charts as PNG.
-      </div>
-      <div class="card-tags">
-        <span class="tag tag-blue">Step 4</span>
-        <span class="tag tag-orange">Robustness</span>
-        <span class="tag tag-orange">Transparency</span>
-        <span class="tag tag-grey">PNG export</span>
-      </div>
-      <div class="card-action">Open tool</div>
+      <div class="card-desc">Visual overview of the validation evidence chain for each tool — from development through internal validation, retrospective and prospective external validation.</div>
+      <div class="card-dims">Development · Internal · Retrospective · Prospective</div>
     </a>
 
   </div>
 
-  <!-- Word documents -->
-  <div class="section-label">Word documents — download, print, and fill in per study</div>
-  <div class="doc-list">
-
-    <div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div>
-        <div class="doc-name">Extraction Codebook (Empty)</div>
-        <div class="doc-desc">
-          The full extraction codebook for each study — all 9 sections.
-          Robustness-relevant questions highlighted in amber.
-          <strong>File:</strong> AI_Extraction_Codebook_Robustness_Marked.docx
-        </div>
-      </div>
-    </div>
-
-    <div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div>
-        <div class="doc-name">Robustness &amp; Transparency Scoring Sheet</div>
-        <div class="doc-desc">
-          Score each study on 7 robustness dimensions (R1–R7) and 7 transparency
-          dimensions (T1–T7). Yes/no per question, tallied into % scores per dimension.
-          Transfer scores to the radar chart tool.
-          <strong>File:</strong> Robustness_Transparency_Scoring_Sheet.docx
-        </div>
-      </div>
-    </div>
-
-    <div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div>
-        <div class="doc-name">Population Comparison — Step 1</div>
-        <div class="doc-desc">
-          Side-by-side comparison of intended use population, training data population,
-          and RCT study population. Flags mismatches between the three.
-          <strong>File:</strong> Robustness_Step1_Population_Comparison.docx
-        </div>
-      </div>
-    </div>
-
-    <div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div>
-        <div class="doc-name">Results Across Subgroups — Step 2</div>
-        <div class="doc-desc">
-          Records clinical outcome results and AI performance metrics broken down
-          by subgroup (sex, age, race, clinical group, setting, etc.).
-          Flags where subgroup analyses were not reported.
-          <strong>File:</strong> Robustness_Step2_Results_Across_Subgroups.docx
-        </div>
-      </div>
-    </div>
-
-    <div class="doc-row">
-      <div class="doc-icon">📄</div>
-      <div>
-        <div class="doc-name">Tool-Level Overview Sheet</div>
-        <div class="doc-desc">
-          One sheet per tool — aggregates findings across the RCT and all precursor studies.
-          Rows = dimensions, columns = each study + tool-level conclusion.
-          Scores plus space to write what was found per cell.
-          <strong>File:</strong> Tool_Overview_Sheet.docx
-        </div>
-      </div>
-    </div>
-
+  <div class="note">
+    <strong>How to use:</strong> Start with the <strong>Excel Row → Scoring Mapping</strong> to understand what your codebook fields map to.
+    Then open the appropriate scoring tool, import your codebook Excel (one sheet per tool), and score.
+    Use the <strong>Population Scope Match</strong> tool alongside D1 to assess how well the study population matches the intended use before setting the mismatch penalty.
+    The Python script <code>robustness_score.py</code> automates batch scoring from the command line.
   </div>
 
-  <!-- How to use -->
-  <div class="section-label">How to use these tools together</div>
-  <div style="background:white;border-radius:8px;border:1px solid #dce3ec;padding:20px;font-size:13px;line-height:1.8;color:#444;">
-    <strong style="color:#1F4E79">1. Map the studies found describing a specific tool.</strong> — Open the <em>Review Overview</em> tool.
-    Add each AI tool and its associated studies. This gives you a bird's-eye view of what you're working with.<br><br>
-    <strong style="color:#1F4E79">2. Extract information of each study.</strong> — Use the <em>Extraction Codebook</em> (Word) per study.
-    Amber-highlighted questions are robustness-relevant. This might become automatised in the future. <br><br>
-    <strong style="color:#1F4E79">3. Visualise validation evidence</strong> — Use the <em>Validation Cascade</em> tool
-    to plot performance across all 5 validation steps per tool. See where performance drops and
-    how deep the evidence goes. Export as PNG.<br><br>
-    <strong style="color:#1F4E79">4. Visualise robustness &amp; transparency profiles</strong> — Enter scores into the <em>Radar Chart</em> tool.
-    Export as PNG for your paper.<br><br>
-    <strong style="color:#1F4E79">5. Summarise per tool</strong> — Complete the <em>Tool-Level Overview Sheet</em> (Word)
-    to aggregate evidence across the RCT and precursors into a single tool-level judgement. (IN PROGESS!)
-  </div>
-
-</main>
+</div>
 
 <footer>
-  All tools run entirely in your browser — no data is sent to any server.
-  To update a tool, replace the corresponding HTML file and refresh the page.
+  Medical AI Robustness Review · Systematic review of AI clinical decision support tools in mental health RCTs ·
+  <a href="https://github.com" style="color:#aaa;">GitHub</a>
 </footer>
 
 </body>
