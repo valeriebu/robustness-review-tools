@@ -96,6 +96,17 @@ table.ct td:first-child{text-align:left;font-weight:bold;}
   </div>
 </div>
 
+<div style="display:flex;align-items:center;gap:8px;padding:10px 24px;background:#f7f9fc;border-bottom:1px solid #dce3ec;font-size:11px;">
+  <span style="color:#888;">&#128190; Auto-saved to browser</span>
+  <span style="color:#ddd;">|</span>
+  <button onclick="exportJSON()" style="padding:4px 12px;background:#1F4E79;color:white;border:none;border-radius:4px;font-size:11px;cursor:pointer;">&#8659; Export JSON</button>
+  <label style="padding:4px 12px;background:#375623;color:white;border-radius:4px;font-size:11px;cursor:pointer;">
+    &#8657; Import JSON
+    <input type="file" accept=".json" style="display:none" onchange="importJSON(this.files[0])">
+  </label>
+  <button onclick="clearStorage()" style="padding:4px 12px;background:#f5f5f5;color:#c00;border:1px solid #ddd;border-radius:4px;font-size:11px;cursor:pointer;">&#128465; Clear</button>
+</div>
+
 <div id="panel-imp" class="panel active">
   <div class="imp-wrap">
     <h2 style="color:#00695C;font-size:15px;margin-bottom:8px">Import from Excel</h2>
@@ -342,8 +353,8 @@ function clip(v){return Math.max(0,Math.min(10,Math.round(v*10)/10));}
 function at(){return tools.find(t=>t.id===aid);}
 function rgb(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
 
-function addTool(name,ans){const id="t"+(++tn);tools.push({id,name:name||("Tool "+tn),color:COLS[tools.length%COLS.length],ans:ans||blank()});aid=id;renderAll();}
-function delTool(id){tools=tools.filter(t=>t.id!==id);aid=tools.length?tools[tools.length-1].id:null;renderAll();}
+function addTool(name,ans){const id="t"+(++tn);tools.push({id,name:name||("Tool "+tn),color:COLS[tools.length%COLS.length],ans:ans||blank()});aid=id;saveToStorage();renderAll();}
+function delTool(id){tools=tools.filter(t=>t.id!==id);aid=tools.length?tools[tools.length-1].id:null;saveToStorage();renderAll();}
 function renderAll(){renderScore();updChart();}
 
 function go(name){
@@ -358,7 +369,7 @@ function go(name){
 function setA(tid,qid,val){
   const t=tools.find(x=>x.id===tid);if(!t)return;
   if(typeof val==="boolean"&&t.ans[qid]===val)val=null;
-  t.ans[qid]=val;renderScore();updChart();
+  t.ans[qid]=val;saveToStorage();renderScore();updChart();
 }
 
 function renderScore(){
@@ -373,7 +384,7 @@ function renderScore(){
   if(at()){
     const inp=document.createElement("input");Object.assign(inp,{type:"text",value:at().name,placeholder:"Tool name"});
     inp.style.cssText="border:1px solid #ccc;border-radius:4px;padding:4px 8px;font-size:12px;font-family:Arial;width:150px";
-    inp.oninput=()=>{at().name=inp.value;updChart();};bar.appendChild(inp);
+    inp.oninput=()=>{at().name=inp.value;saveToStorage();updChart();};bar.appendChild(inp);
     const db=document.createElement("button");db.className="del-btn";db.textContent="Remove";db.onclick=()=>delTool(aid);bar.appendChild(db);
   }
   const ab=document.createElement("button");ab.className="add-btn";ab.textContent="+ Add Tool";ab.onclick=()=>addTool();bar.appendChild(ab);
@@ -484,6 +495,83 @@ function applyImport(){
   document.getElementById("imp-pre").style.display="none";
   setSt(`&#10003; Imported ${tools.length} tool(s) &#8212; go to Score or Radar Chart tab.`,"#00695C");
 }
+
+
+// ── LOCALSTORAGE PERSISTENCE ──────────────────────────────────────────
+const STORAGE_KEY = 'robustness_models_v1';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+  } catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved) || !saved.length) return false;
+    tools = saved;
+    aid = tools[tools.length-1].id;
+    // Restore tn to avoid ID collisions
+    tn = Math.max(...tools.map(t => parseInt(t.id.replace('t','')) || 0));
+    renderAll();
+    return true;
+  } catch(e) { console.warn('Load failed:', e); return false; }
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(tools, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = STORAGE_KEY + '_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importJSON(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      // Merge: add imported tools that don't already exist by name
+      imported.forEach(t => {
+        if (!tools.find(x => x.name === t.name)) {
+          tools.push(t);
+          tn = Math.max(tn, parseInt(t.id.replace('t','')) || 0);
+        }
+      });
+      aid = tools[tools.length-1].id;
+      saveToStorage();
+      renderAll();
+      setSt('&#10003; Imported ' + imported.length + ' tool(s) from file.', '#00695C');
+    } catch(err) { setSt('&#10060; Import failed: ' + err.message, '#c00'); }
+  };
+  r.readAsText(file);
+}
+
+function clearStorage() {
+  if (!confirm('Clear all saved data for this tool? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  tools = []; aid = null; tn = 0;
+  renderAll();
+}
+
+// Auto-load on startup
+window.addEventListener('DOMContentLoaded', () => {
+  const loaded = loadFromStorage();
+  if (loaded) {
+    const panel = document.getElementById('panel-score');
+    if (panel) {
+      const notice = document.createElement('div');
+      notice.style.cssText = 'background:#E8F8F5;border:1px solid #00897B;border-radius:6px;padding:8px 14px;font-size:11px;color:#00695C;margin-bottom:12px;';
+      notice.innerHTML = '&#128190; ' + tools.length + ' tool(s) restored from last session. <a href="#" onclick="clearStorage();return false;" style="color:#c00;margin-left:8px;">Clear saved data</a>';
+      panel.prepend(notice);
+    }
+  }
+});
 
 </script>
 </body>
