@@ -149,6 +149,84 @@ table.ct td:first-child{text-align:left;font-weight:bold;}
 </div>
 
 <script>
+
+// ── LOCALSTORAGE PERSISTENCE ──────────────────────────────────────────
+const STORAGE_KEY = 'robustness_models_v1';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
+  } catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved) || !saved.length) return false;
+    tools = saved;
+    aid = tools[tools.length-1].id;
+    // Restore tn to avoid ID collisions
+    tn = Math.max(...tools.map(t => parseInt(t.id.replace('t','')) || 0));
+    renderAll();
+    return true;
+  } catch(e) { console.warn('Load failed:', e); return false; }
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(tools, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = STORAGE_KEY + '_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importJSON(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Invalid format');
+      // Merge: add imported tools that don't already exist by name
+      imported.forEach(t => {
+        if (!tools.find(x => x.name === t.name)) {
+          tools.push(t);
+          tn = Math.max(tn, parseInt(t.id.replace('t','')) || 0);
+        }
+      });
+      aid = tools[tools.length-1].id;
+      saveToStorage();
+      renderAll();
+      setSt('&#10003; Imported ' + imported.length + ' tool(s) from file.', '#00695C');
+    } catch(err) { setSt('&#10060; Import failed: ' + err.message, '#c00'); }
+  };
+  r.readAsText(file);
+}
+
+function clearStorage() {
+  if (!confirm('Clear all saved data for this tool? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  tools = []; aid = null; tn = 0;
+  renderAll();
+}
+
+// Auto-load on startup
+window.addEventListener('DOMContentLoaded', () => {
+  const loaded = loadFromStorage();
+  if (loaded) {
+    const panel = document.getElementById('panel-score');
+    if (panel) {
+      const notice = document.createElement('div');
+      notice.style.cssText = 'background:#E8F8F5;border:1px solid #00897B;border-radius:6px;padding:8px 14px;font-size:11px;color:#00695C;margin-bottom:12px;';
+      notice.innerHTML = '&#128190; ' + tools.length + ' tool(s) restored from last session. <a href="#" onclick="clearStorage();return false;" style="color:#c00;margin-left:8px;">Clear saved data</a>';
+      panel.prepend(notice);
+    }
+  }
+});
+
+
 const D=[{id:1,lb:"Data Representativeness & Scope Match",dc:"Intended population defined? Training & RCT populations match it?",cl:"#4472C4",lt:"#DEEAF1",dn:13.5,sc:"compare",cp:"Intended use unspecified \u2192 cap 5/10. Mismatch penalty: \u22120.5 per mismatch (max \u22122.0)",qs:[
   {id:"d1_ri",t:"Region/Location of Intended Use reported",rf:"2.2",p:.5,tp:"bin"},
   {id:"d1_si",t:"Setting of Intended Use reported",rf:"2.2",p:.5,tp:"bin"},
@@ -495,83 +573,6 @@ function applyImport(){
   document.getElementById("imp-pre").style.display="none";
   setSt(`&#10003; Imported ${tools.length} tool(s) &#8212; go to Score or Radar Chart tab.`,"#00695C");
 }
-
-
-// ── LOCALSTORAGE PERSISTENCE ──────────────────────────────────────────
-const STORAGE_KEY = 'robustness_models_v1';
-
-function saveToStorage() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tools));
-  } catch(e) { console.warn('Save failed:', e); }
-}
-
-function loadFromStorage() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    if (!Array.isArray(saved) || !saved.length) return false;
-    tools = saved;
-    aid = tools[tools.length-1].id;
-    // Restore tn to avoid ID collisions
-    tn = Math.max(...tools.map(t => parseInt(t.id.replace('t','')) || 0));
-    renderAll();
-    return true;
-  } catch(e) { console.warn('Load failed:', e); return false; }
-}
-
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(tools, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = STORAGE_KEY + '_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-}
-
-function importJSON(file) {
-  if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    try {
-      const imported = JSON.parse(e.target.result);
-      if (!Array.isArray(imported)) throw new Error('Invalid format');
-      // Merge: add imported tools that don't already exist by name
-      imported.forEach(t => {
-        if (!tools.find(x => x.name === t.name)) {
-          tools.push(t);
-          tn = Math.max(tn, parseInt(t.id.replace('t','')) || 0);
-        }
-      });
-      aid = tools[tools.length-1].id;
-      saveToStorage();
-      renderAll();
-      setSt('&#10003; Imported ' + imported.length + ' tool(s) from file.', '#00695C');
-    } catch(err) { setSt('&#10060; Import failed: ' + err.message, '#c00'); }
-  };
-  r.readAsText(file);
-}
-
-function clearStorage() {
-  if (!confirm('Clear all saved data for this tool? This cannot be undone.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  tools = []; aid = null; tn = 0;
-  renderAll();
-}
-
-// Auto-load on startup
-window.addEventListener('DOMContentLoaded', () => {
-  const loaded = loadFromStorage();
-  if (loaded) {
-    const panel = document.getElementById('panel-score');
-    if (panel) {
-      const notice = document.createElement('div');
-      notice.style.cssText = 'background:#E8F8F5;border:1px solid #00897B;border-radius:6px;padding:8px 14px;font-size:11px;color:#00695C;margin-bottom:12px;';
-      notice.innerHTML = '&#128190; ' + tools.length + ' tool(s) restored from last session. <a href="#" onclick="clearStorage();return false;" style="color:#c00;margin-left:8px;">Clear saved data</a>';
-      panel.prepend(notice);
-    }
-  }
-});
 
 </script>
 </body>
