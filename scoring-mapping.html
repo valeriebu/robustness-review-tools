@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Row → Scoring Mapping</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:12px;background:#f5f7fa;color:#222;}
+h1{font-size:16px;font-weight:bold;color:#1F4E79;padding:16px 20px 4px;}
+p.sub{font-size:11px;color:#666;padding:0 20px 14px;}
+
+.filter-bar{display:flex;gap:8px;align-items:center;padding:0 20px 12px;flex-wrap:wrap;}
+.filter-bar input{border:1px solid #ccc;border-radius:4px;padding:5px 10px;font-size:12px;font-family:Arial;width:220px;}
+.dim-btn{padding:4px 10px;border-radius:12px;border:1.5px solid transparent;font-size:11px;font-weight:bold;cursor:pointer;font-family:Arial;background:#f0f0f0;color:#555;}
+.dim-btn.active{color:white;}
+
+table{width:100%;border-collapse:collapse;background:white;}
+thead th{position:sticky;top:0;background:#1F4E79;color:white;padding:8px 10px;text-align:left;font-size:11px;font-weight:bold;white-space:nowrap;z-index:2;}
+thead th:first-child{width:52px;text-align:center;}
+thead th:nth-child(2){width:44px;}
+thead th:nth-child(3){width:520px;}
+thead th:nth-child(4){width:60px;text-align:center;}
+thead th:nth-child(5){width:60px;text-align:center;}
+thead th:nth-child(6){width:60px;text-align:center;}
+
+tbody tr{border-bottom:1px solid #eee;}
+tbody tr:hover{background:#f9fafb;}
+tbody tr.dim-sep td{background:#f0f3f7;font-weight:bold;font-size:11px;color:#1F4E79;padding:6px 10px;border-top:2px solid #dce3ec;}
+
+td{padding:6px 10px;vertical-align:top;line-height:1.4;}
+td:first-child{text-align:center;font-weight:bold;font-size:11px;color:#888;white-space:nowrap;}
+td:nth-child(2){text-align:center;font-weight:bold;font-size:12px;}
+td.field{font-size:11px;color:#333;}
+td.field .codebook{font-size:10px;color:#aaa;margin-top:1px;}
+td.pts{text-align:center;font-size:11px;}
+td.type{text-align:center;}
+td.dim-cell{text-align:center;}
+
+.pts-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:bold;}
+.pts-05{background:#E2EFDA;color:#375623;}
+.pts-1{background:#DEEAF1;color:#1F4E79;}
+.pts-2{background:#FCE4D6;color:#C00;}
+.pts-4{background:#EAD1DC;color:#7B003F;}
+.pts-grd{background:#F4ECF7;color:#5B2C8A;}
+.pts-adj{background:#FFF2CC;color:#7D6000;}
+.pts-gate{background:#FCE4D6;color:#C00;border:1px solid #FF4B00;}
+
+.type-bin{font-size:10px;color:#666;}
+.type-grd{font-size:10px;color:#5B2C8A;font-weight:bold;}
+.type-gate{font-size:10px;color:#C00;font-weight:bold;}
+.type-adj{font-size:10px;color:#7D6000;font-weight:bold;}
+
+.dim-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;color:white;}
+
+.note{font-size:10px;color:#888;font-style:italic;margin-top:2px;}
+.dual{font-size:10px;color:#0066CC;margin-top:1px;}
+
+.formula-row td{background:#F8F8F8;font-size:11px;color:#333;padding:5px 10px 8px;}
+.formula-box{background:#fff;border:1px solid #dce3ec;border-radius:4px;padding:4px 10px;font-family:monospace;font-size:11px;display:inline-block;margin-top:2px;}
+.cap-note{color:#C00;font-style:italic;margin-top:3px;font-size:10px;}
+
+.hidden{display:none;}
+</style>
+</head>
+<body>
+
+<h1>Excel Row → Robustness Scoring: Complete Reference</h1>
+<p class="sub">Every row from your codebook Excel file that feeds into scoring. Row numbers are 0-based (as read by the import). Click a dimension to filter.</p>
+
+<div class="filter-bar">
+  <input type="text" id="search" placeholder="Search field name..." oninput="filterTable()">
+  <button class="dim-btn active" onclick="filterDim(0,this)">All</button>
+  <button class="dim-btn" onclick="filterDim(1,this)" style="border-color:#4472C4;color:#4472C4">D1</button>
+  <button class="dim-btn" onclick="filterDim(2,this)" style="border-color:#70AD47;color:#375623">D2</button>
+  <button class="dim-btn" onclick="filterDim(3,this)" style="border-color:#FFC000;color:#7D6000">D3</button>
+  <button class="dim-btn" onclick="filterDim(4,this)" style="border-color:#FF4B00;color:#C03000">D4</button>
+  <button class="dim-btn" onclick="filterDim(5,this)" style="border-color:#CC0066;color:#990049">D5</button>
+  <button class="dim-btn" onclick="filterDim(6,this)" style="border-color:#7030A0;color:#4B0082">D6</button>
+  <button class="dim-btn" onclick="filterDim(7,this)" style="border-color:#C00000;color:#800000">D7</button>
+  <button class="dim-btn" onclick="filterDim(8,this)" style="border-color:#00695C;color:#004D40">D8</button>
+  <button class="dim-btn" onclick="filterDim(9,this)" style="border-color:#E8703A;color:#B84A1A">D9</button>
+  <button class="dim-btn" onclick="filterDim(10,this)" style="border-color:#8E44AD;color:#6C3483">D10</button>
+</div>
+
+<table id="main-table">
+<thead>
+  <tr>
+    <th>Excel row</th>
+    <th>Dim</th>
+    <th>Excel field name (col A) → Scoring question</th>
+    <th>Points</th>
+    <th>Type</th>
+    <th>Codebook ref</th>
+  </tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+<script>
+const DIM_COLORS = {
+  1:"#4472C4",2:"#70AD47",3:"#FFC000",4:"#FF4B00",5:"#CC0066",
+  6:"#7030A0",7:"#C00000",8:"#00695C",9:"#E8703A",10:"#8E44AD"
+};
+const DIM_LIGHTS = {
+  1:"#DEEAF1",2:"#E2EFDA",3:"#FFF2CC",4:"#FCE4D6",5:"#EAD1DC",
+  6:"#D9D2E9",7:"#F4CCCC",8:"#E0F2F1",9:"#FDE9D9",10:"#F4ECF7"
+};
+
+const ROWS = [
+  // ── D1 ─────────────────────────────────────────────────────────────
+  {dim:1, sep:"D1 — Data Representativeness & Scope Match", formula:"(raw ÷ 13.5) × 10 − (mismatches × 0.5)", cap:"If intended use entirely unspecified → cap 5/10"},
+  {row:15,  dim:1, field:"Region/Location of Intended Use (Continent, Country, Region…) — Extract",         q:"Region/Location of Intended Use reported",                            pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:17,  dim:1, field:"Setting of Intended Use (e.g. Unit of Hospital) — Extract",                       q:"Setting of Intended Use reported",                                    pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:25,  dim:1, field:"Sex of Target Population — Extract",                                              q:"Sex of Target Population specified",                                  pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:29,  dim:1, field:"Race/Ethnicity of Target Population — Extract",                                   q:"Race/Ethnicity of Target Population specified",                       pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:31,  dim:1, field:"Age of Target Population — Extract",                                              q:"Age of Target Population specified",                                  pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:39,  dim:1, field:"Mental Health of Target Population — Extract",                                    q:"Mental Health of Target Population specified",                        pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:47,  dim:1, field:"Intended End Users (e.g. Medical Doctor) — Extract",                              q:"Intended End Users described",                                        pts:0.5,  type:"bin",  ref:"2.2"},
+  {row:52,  dim:1, field:"Did the RCT study report any restrictions of the applicability of the AI system?",q:"Restrictions of applicability reported",                              pts:1.0,  type:"bin",  ref:"2.2"},
+  {row:703, dim:1, field:"Dataset Origin for Training/Internal Validation",                                 q:"Training dataset origin described",                                   pts:1.0,  type:"bin",  ref:"6.2", dual:"also → D2 denominator context"},
+  {row:704, dim:1, field:"Timeframe of Data Collection (training)",                                         q:"Timeframe of training data collection reported",                      pts:0.5,  type:"bin",  ref:"6.2"},
+  {row:706, dim:1, field:"Location of Data Collection (training)",                                          q:"Location/country of training data reported",                          pts:0.5,  type:"bin",  ref:"6.2"},
+  {row:711, dim:1, field:"Setting during Data Collection (training)",                                       q:"Setting during training data collection reported",                    pts:0.5,  type:"bin",  ref:"6.2"},
+  {row:724, dim:1, field:"Sex (training demographics — Represented Individuals section)",                   q:"Sex represented in training dataset reported",                        pts:0.5,  type:"bin",  ref:"6.3"},
+  {row:728, dim:1, field:"Race/Ethnicity (training demographics)",                                          q:"Race/Ethnicity in training dataset reported",                         pts:1.0,  type:"bin",  ref:"6.3", note:"Double-weighted — key fairness indicator"},
+  {row:732, dim:1, field:"Age (training demographics)",                                                     q:"Age in training dataset reported",                                    pts:0.5,  type:"bin",  ref:"6.3"},
+  {row:748, dim:1, field:"Mental Health (training demographics)",                                           q:"Mental health characteristics of training dataset reported",           pts:0.5,  type:"bin",  ref:"6.3"},
+  {row:736, dim:1, field:"Socioeconomic Status (training demographics)",                                    q:"SES / employment of training dataset reported",                       pts:0.5,  type:"bin",  ref:"6.3"},
+  {row:924, dim:1, field:"Were any similarities or differences between the study and the training data described?",q:"Similarities/differences between study and training data described",pts:1.0,type:"bin",ref:"7.1"},
+  {row:89,  dim:1, field:"Genders of Study Population — Space for Specification",                           q:"Baseline population characteristics reported",                        pts:1.0,  type:"bin",  ref:"4.2", dual:"also → D6: demographics"},
+  {row:157, dim:1, field:"Study Location",                                                                  q:"Country/region of RCT reported",                                      pts:0.5,  type:"bin",  ref:"4.5", dual:"also → D6: dataset origin"},
+  {row:162, dim:1, field:"Setting",                                                                         q:"Clinical setting of RCT described",                                   pts:0.5,  type:"bin",  ref:"4.5", dual:"also → D6: setting"},
+  {row:149, dim:1, field:"Extract the language(s) in which the tool can be used",                           q:"Language(s) in which tool was used during RCT reported",              pts:0.5,  type:"bin",  ref:"4.3"},
+  {row:"adj",dim:1,field:"(Manual adjuster in Score tab — not from Excel)",                                 q:"MISMATCH PENALTY: number of major mismatches identified (0–4) × −0.5",pts:0,  type:"adj",  ref:"—"},
+
+  // ── D2 ─────────────────────────────────────────────────────────────
+  {dim:2, sep:"D2 — Data Integrity & Quality", formula:"(raw ÷ 8) × 10", cap:"Ground truth not described → cap 4/10"},
+  {row:764, dim:2, field:"Total Number of Individuals Represented in Training Data Set",                     q:"Total N in training dataset reported",                                pts:1.0,  type:"bin",  ref:"6.2"},
+  {row:765, dim:2, field:"Was there a description of data cleaning steps?",                                  q:"Data cleaning steps described",                                       pts:1.0,  type:"bin",  ref:"6.4"},
+  {row:766, dim:2, field:"Was the handling of missing values described?",                                    q:"Handling of missing values described",                                pts:2.0,  type:"bin",  ref:"6.4", note:"Double-weighted — most consequential data decision"},
+  {row:767, dim:2, field:"Was the handling of any data imputation or data transformation described?",        q:"Data imputation or transformation described",                         pts:1.0,  type:"bin",  ref:"6.4"},
+  {row:768, dim:2, field:"Were any other data quality checking or preprocessing steps described?",           q:"Other data quality checking steps described",                         pts:1.0,  type:"bin",  ref:"6.4"},
+  {row:770, dim:2, field:"How was ground truth established?",                                                q:"Ground truth establishment described",                                pts:2.0,  type:"bin",  ref:"6.4", note:"Double-weighted & CRITICAL — triggers cap if absent"},
+  {row:769, dim:2, field:"Was the AI system performance assessed with synthetic data?",                      q:"Performance assessed with synthetic data",                            pts:1.0,  type:"bin",  ref:"6.4"},
+
+  // ── D3 ─────────────────────────────────────────────────────────────
+  {dim:3, sep:"D3 — Initial Development", formula:"(raw ÷ 7) × 10", cap:"Data splitting not described → cap 4/10"},
+  {row:59,  dim:3, field:"What was the type of algorithm or base model is used?",                            q:"Type of algorithm described",                                         pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:60,  dim:3, field:"Was the rationale for the choice of the algorithm described?",                     q:"Rationale for choice of algorithm described",                         pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:62,  dim:3, field:"Was the architecture described?",                                                  q:"Architecture described",                                              pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:699, dim:3, field:"Was the method of datasplitting described?",                                       q:"Method of data splitting described",                                  pts:1.0,  type:"bin",  ref:"6.1", note:"CRITICAL — triggers cap if absent"},
+  {row:700, dim:3, field:"Was the method of resampling described?",                                          q:"Method of resampling described (e.g. cross-validation)",              pts:1.0,  type:"bin",  ref:"6.1"},
+  {row:701, dim:3, field:"Was the optimization method described?",                                           q:"Optimisation method described",                                       pts:1.0,  type:"bin",  ref:"6.1"},
+  {row:702, dim:3, field:"Was hyperparameter optimization performed?",                                       q:"Hyperparameter optimisation performed",                               pts:1.0,  type:"bin",  ref:"6.1"},
+
+  // ── D4 ─────────────────────────────────────────────────────────────
+  {dim:4, sep:"D4 — Internal Validation", formula:"(raw ÷ 6) × 10", cap:"No performance metrics reported → score = 0/10"},
+  {row:772, dim:4, field:"What were the selected performance metrics? (internal validation)",                q:"Performance metrics for internal validation reported",                pts:2.0,  type:"bin",  ref:"6.5", note:"Double-weighted & CRITICAL — triggers 0/10 if absent"},
+  {row:778, dim:4, field:"Was there a rationale / justification for the selected metrics?",                  q:"Rationale for selected metrics described",                            pts:1.0,  type:"bin",  ref:"6.5"},
+  {row:779, dim:4, field:"Are all results specified with confidence intervals? (internal)",                  q:"Internal validation results reported with CIs",                       pts:2.0,  type:"bin",  ref:"6.5", note:"Double-weighted"},
+  {row:780, dim:4, field:"Any additional information relevant to the robustness assessment (internal)",      q:"Additional robustness information reported for internal validation",   pts:1.0,  type:"bin",  ref:"6.5"},
+
+  // ── D5 ─────────────────────────────────────────────────────────────
+  {dim:5, sep:"D5 — Retrospective External Validation", formula:"GATE: if row 781 = No → 0/10. If Yes → (quality raw ÷ 6) × 10", cap:"Gate is mandatory — absent = entire dimension = 0"},
+  {row:781, dim:5, field:"Pro- and/or Retrospective External Validation (gate question)",                    q:"Retrospective external validation conducted",                         pts:4.0,  type:"gate", ref:"6.6", note:"🔑 GATE — must be Yes for any other D5 score"},
+  {row:788, dim:5, field:"Dataset Origin (external validation)",                                             q:"External validation dataset origin described",                        pts:1.0,  type:"bin",  ref:"6.7"},
+  {row:792, dim:5, field:"Timeframe of Data Collection (external validation)",                               q:"Timeframe of external validation data reported",                      pts:0.5,  type:"bin",  ref:"6.7"},
+  {row:796, dim:5, field:"Region/Location of Data Collection (external validation)",                         q:"Location of external validation reported",                            pts:0.5,  type:"bin",  ref:"6.7"},
+  {row:800, dim:5, field:"Setting during Data Collection (external validation)",                             q:"Setting of external validation reported",                             pts:0.5,  type:"bin",  ref:"6.7"},
+  {row:804, dim:5, field:"Autonomy of tool during Data Collection (external validation)",                    q:"Autonomy level during external validation described",                 pts:0.5,  type:"bin",  ref:"6.7"},
+  {row:821, dim:5, field:"Sex .4 (external validation demographics)",                                        q:"Sex in external validation dataset reported",                         pts:0.5,  type:"bin",  ref:"6.8"},
+  {row:825, dim:5, field:"Race/Ethnicity .4 (external validation demographics)",                             q:"Race/Ethnicity in external validation dataset reported",              pts:1.0,  type:"bin",  ref:"6.8", note:"Double-weighted — key for fairness"},
+  {row:829, dim:5, field:"Age .4 (external validation demographics)",                                        q:"Age in external validation dataset reported",                         pts:0.5,  type:"bin",  ref:"6.8"},
+  {row:845, dim:5, field:"Mental Health .4 (external validation demographics)",                              q:"Mental health characteristics in external validation reported",        pts:0.5,  type:"bin",  ref:"6.8"},
+  {row:879, dim:5, field:"Was there a description of data cleaning steps? (external validation)",            q:"Data cleaning for external validation described",                     pts:0.5,  type:"bin",  ref:"6.10"},
+  {row:880, dim:5, field:"Was the handling of missing values described? (external validation)",              q:"Missing values handling in external validation described",            pts:0.5,  type:"bin",  ref:"6.10"},
+  {row:884, dim:5, field:"How was ground truth established? (external validation)",                          q:"Ground truth for external validation described",                      pts:0.5,  type:"bin",  ref:"6.10"},
+  {row:886, dim:5, field:"What were the performance metrics? (external validation)",                         q:"Performance metrics for external validation reported",                pts:2.0,  type:"bin",  ref:"6.10", note:"Double-weighted"},
+  {row:892, dim:5, field:"Was there a rationale / justification for the selected metrics? (external)",       q:"Rationale for external validation metrics",                           pts:0.5,  type:"bin",  ref:"6.10"},
+  {row:894, dim:5, field:"Are all results specified with confidence intervals? (external validation)",       q:"External validation results reported with CIs",                       pts:1.0,  type:"bin",  ref:"6.10"},
+  {row:893, dim:5, field:"Was there a rationale / justification for the overall testing strategy?",          q:"Rationale for overall testing strategy described",                    pts:0.5,  type:"bin",  ref:"6.10"},
+
+  // ── D6 ─────────────────────────────────────────────────────────────
+  {dim:6, sep:"D6 — Prospective External Validation", formula:"GATE: if row 71 = No → 0/10. If Yes → (quality raw ÷ 6) × 10", cap:"RCT counts as prospective validation if tool was actively deployed"},
+  {row:71,  dim:6, field:"Which type of Randomized study is this?",                                          q:"Prospective external validation conducted (RCT = Yes if tool actively deployed)", pts:4.0, type:"gate", ref:"6.6", note:"🔑 GATE — RCT qualifies; must be filled for D6 to score"},
+  {row:157, dim:6, field:"Study Location",                                                                   q:"Prospective validation dataset origin / country described",           pts:1.0,  type:"bin",  ref:"6.7/6.8", dual:"also → D1: country/region of RCT"},
+  {row:89,  dim:6, field:"Genders of Study Population — Space for Specification",                            q:"Prospective validation dataset demographics reported",               pts:1.0,  type:"bin",  ref:"6.7/6.8", dual:"also → D1: baseline characteristics"},
+  {row:162, dim:6, field:"Setting",                                                                          q:"Setting / deployment context of prospective validation described",   pts:1.0,  type:"bin",  ref:"6.7/6.8", dual:"also → D1: clinical setting of RCT"},
+  {row:666, dim:6, field:"Are all results specified with confidence intervals? (RCT outcomes)",              q:"Performance metrics for prospective validation reported",             pts:2.0,  type:"bin",  ref:"6.10", note:"Double-weighted; uses CI question as proxy for metric reporting"},
+  {row:666, dim:6, field:"Are all results specified with confidence intervals? (RCT outcomes)",              q:"Prospective validation results reported with CIs",                   pts:1.0,  type:"bin",  ref:"6.10", dual:"also → D6 d6_me: same row — codebook combines metrics & CIs for RCT"},
+  {row:79,  dim:6, field:"Was a Sample Size Calculation carried out?",                                       q:"Testing strategy rationale for prospective validation",               pts:1.0,  type:"bin",  ref:"6.10", note:"Pre-specified sample size = evidence of prospective planning"},
+
+  // ── D7 ─────────────────────────────────────────────────────────────
+  {dim:7, sep:"D7 — Subgroup & Fairness Testing", formula:"(raw ÷ 10) × 10", cap:"No cap — score of 0 expected for many tools"},
+  {row:912, dim:7, field:"Sexes? Extract:",                                                                  q:"Performance tested across sexes",                                    pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:913, dim:7, field:"Race/Ethnicities? Extract:",                                                       q:"Performance tested across race/ethnicities",                         pts:1.0,  type:"bin",  ref:"7.1", note:"Double-weighted — known disparities in AI tools"},
+  {row:914, dim:7, field:"Ages? Extract:",                                                                   q:"Performance tested across age groups",                               pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:918, dim:7, field:"Clinical groups? Extract:",                                                        q:"Performance tested across clinical groups",                          pts:1.0,  type:"bin",  ref:"7.1", note:"Double-weighted — directly relevant to intended use"},
+  {row:906, dim:7, field:"Locations? Extract:",                                                              q:"Performance tested across locations/sites",                          pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:905, dim:7, field:"Timespans? Extract:",                                                              q:"Performance tested across timespans",                               pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:921, dim:7, field:"Did the study look at how belonging to more than one group at the same time…",     q:"Intersectionality (combined subgroup membership) considered",        pts:1.0,  type:"bin",  ref:"7.1"},
+  {row:922, dim:7, field:"Was any other evidence provided for any consistencies or inconsistencies of performance?",q:"Consistencies/inconsistencies of performance across groups described",pts:1.0,type:"bin",ref:"7.1"},
+  {row:926, dim:7, field:"Was any fairness assessment reported or measures taken to prevent bias?",          q:"Fairness assessment or bias prevention measures reported",            pts:2.0,  type:"bin",  ref:"7.1", note:"Double-weighted — high-bar robustness effort"},
+  {row:927, dim:7, field:"Were prediction errors analyzed to identify characteristics more prone to inaccurate predictions?",q:"Prediction errors analysed to identify vulnerable subgroups",pts:1.0,type:"bin",ref:"7.1"},
+
+  // ── D8 ─────────────────────────────────────────────────────────────
+  {dim:8, sep:"D8 — Deployment & Operational Stability", formula:"(raw ÷ 10) × 10", cap:"No cap — partial scores meaningful"},
+  {row:67,  dim:8, field:"Does the AI system require the user to select a decision threshold?",              q:"Decision threshold addressed (pre-set or user-selected described)",  pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:68,  dim:8, field:"Was there uncertainty scores about the prediction displayed on the UX?",           q:"Uncertainty scores displayed on UX",                                 pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:69,  dim:8, field:"Was a function allocation / escalation channel to humans in place?",               q:"Function allocation / escalation channel to humans in place",        pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:70,  dim:8, field:"Is the system able to detect varying environments so that it can adapt?",          q:"System able to detect varying environments and adapt",               pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:907, dim:8, field:"Settings? Extract:",                                                               q:"Performance tested across settings",                                pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:909, dim:8, field:"Devices? Extract:",                                                                q:"Performance tested across devices/platforms",                        pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:908, dim:8, field:"Level of Autonomy of the Tool? Extract:",                                          q:"Performance tested across autonomy levels",                          pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:920, dim:8, field:"End-User Characteristics? Extract:",                                               q:"Performance tested across end-user characteristics",                 pts:0.5,  type:"bin",  ref:"7.1"},
+  {row:163, dim:8, field:"Levels of Autonomy of Tool during Study Conduct",                                  q:"Autonomy level of tool during RCT described",                        pts:1.0,  type:"bin",  ref:"4.5"},
+  {row:164, dim:8, field:"Device used during study",                                                         q:"Device used during study described",                                 pts:0.5,  type:"bin",  ref:"4.6"},
+  {row:167, dim:8, field:"Technical Integration during Study:",                                              q:"Technical integration during study described",                       pts:1.0,  type:"bin",  ref:"4.6"},
+  {row:168, dim:8, field:"End-Users during Study",                                                           q:"End-user type during study described",                               pts:0.5,  type:"bin",  ref:"4.7"},
+  {row:169, dim:8, field:"End-User Characteristics",                                                         q:"End-user expertise/training described",                              pts:1.0,  type:"bin",  ref:"4.7"},
+  {row:673, dim:8, field:"How was the outcome displayed on the User Interface?",                             q:"Outcome blinding / bias prevention in outcome assessment described",  pts:1.0,  type:"bin",  ref:"4.8"},
+
+  // ── D9 ─────────────────────────────────────────────────────────────
+  {dim:9, sep:"D9 — Stress-Testing & Sensitivity", formula:"(raw ÷ 9) × 10", cap:"No cap — most tools score 0–3; ≥5 = exceptional"},
+  {row:923, dim:9, field:"Were any similarities or differences in performance between different studies on the tool described?",q:"Similarities/differences between studies on the tool described",pts:1.0,type:"bin",ref:"7.1"},
+  {row:925, dim:9, field:"Did the study investigate how different training strategies (e.g. pretraining) affect performance?",q:"Different training strategies investigated",pts:1.0,type:"bin",ref:"7.1"},
+  {row:928, dim:9, field:"Did the study investigate how different parameterization (e.g. hyperparameter-tuning) affects performance?",q:"Hyperparameter sensitivity / parameterization effects investigated",pts:1.0,type:"bin",ref:"7.1"},
+  {row:929, dim:9, field:"Did the study investigate how data missingness affects the performance?",          q:"Data missingness impact on performance investigated",                 pts:1.0,  type:"bin",  ref:"7.1"},
+  {row:930, dim:9, field:"Did the study investigate if data balancing affects the performance?",             q:"Data balancing effects investigated",                                pts:1.0,  type:"bin",  ref:"7.1"},
+  {row:931, dim:9, field:"Was any other robustness/generalizability method or efforts mentioned?",           q:"Other robustness/generalisability methods mentioned",                pts:1.0,  type:"bin",  ref:"7.1"},
+  {row:679, dim:9, field:"Were performance limitations reported?",                                           q:"Performance limitations explicitly reported",                        pts:1.0,  type:"bin",  ref:"4.9"},
+  {row:678, dim:9, field:"Did the authors make claims about the tools robustness?",                          q:"Robustness claims made (positive) with justification",               pts:1.0,  type:"bin",  ref:"4.9"},
+  {row:680, dim:9, field:"Did the study record or analyse adverse events?",                                  q:"Adverse events recorded and analysed",                               pts:1.0,  type:"bin",  ref:"4.9"},
+
+  // ── D10 ─────────────────────────────────────────────────────────────
+  {dim:10, sep:"D10 — Construct Validity", formula:"(raw ÷ 11) × 10", cap:"No cap — 0 on all three core claims is itself an important finding"},
+  {row:66,  dim:10,field:"Was there a justification of the outputs' relevance to the downstream task?",       q:"Justification of output's relevance to downstream clinical task",     pts:1.0,  type:"bin",  ref:"3.1"},
+  {row:682, dim:10,field:"What theoretical framework from psychology was the model based on?",               q:"Theoretical framework (psychological/medical) described",             pts:1.0,  type:"bin",  ref:"5.1"},
+  {row:683, dim:10,field:"Do the authors claim that the features are appropriately suited to predict the specific mental health condition?",q:"Features claimed appropriate for condition — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"0=not mentioned · 1=claimed, no evidence · 2=supported by evidence"},
+  {row:684, dim:10,field:"Do the authors claim that their prediction target is appropriately designed to capture the condition?",q:"Prediction target claimed appropriate — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"0=not mentioned · 1=claimed, no evidence · 2=supported by evidence"},
+  {row:685, dim:10,field:"Do the authors claim that the chosen model effectively captures the relationship between the features and the target?",q:"Model claimed to capture feature-target relationship — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"0=not mentioned · 1=claimed, no evidence · 2=supported by evidence"},
+  {row:686, dim:10,field:"Was there any other external scientific research supporting the assumptions behind the tool's logic?",q:"External scientific research supporting tool logic cited",pts:2.0,type:"bin",ref:"5.1",note:"Double-weighted — external evidence elevates claim"},
+  {row:687, dim:10,field:"Was an explainability technique applied? (prediction model)",                   q:"Explainability technique applied and used for construct validity claims",pts:1.0,type:"bin",ref:"5.1"},
+  // Chatbot variant — same D10 question IDs, parallel rows for chatbot tools
+  {row:689, dim:10,field:"What theoretical framework from psychology was the chatbot based on?",              q:"Theoretical framework (psychological/medical) described",             pts:1.0,  type:"bin",  ref:"5.1", dual:"chatbot variant of row 682"},
+  {row:690, dim:10,field:"Do the authors claim that the chatbot asks for the right inputs to address the condition?",q:"Features claimed appropriate for condition — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"Chatbot variant · 0=not mentioned · 1=claimed · 2=evidenced", dual:"chatbot variant of row 683"},
+  {row:691, dim:10,field:"Do the authors claim that the chatbot's responses are designed appropriately to address the condition?",q:"Prediction target claimed appropriate — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"Chatbot variant · 0=not mentioned · 1=claimed · 2=evidenced", dual:"chatbot variant of row 684"},
+  {row:692, dim:10,field:"Do the authors claim that the chatbot correctly connects the user's inputs to its responses?",q:"Model claimed to capture feature-target relationship — WITH EVIDENCE",pts:2.0,type:"grd",ref:"5.1",note:"Chatbot variant · 0=not mentioned · 1=claimed · 2=evidenced", dual:"chatbot variant of row 685"},
+  {row:693, dim:10,field:"Was there any other external scientific research supporting the assumptions behind the chatbot's logic?",q:"External scientific research supporting tool logic cited",pts:2.0,type:"bin",ref:"5.1",note:"Chatbot variant", dual:"chatbot variant of row 686"},
+  {row:694, dim:10,field:"Was an explainability technique applied? (chatbot)",                               q:"Explainability technique applied and used for construct validity claims",pts:1.0,type:"bin",ref:"5.1", dual:"chatbot variant of row 687"},
+];
+
+function ptsClass(p, t) {
+  if(t==="gate") return "pts-gate";
+  if(t==="grd")  return "pts-grd";
+  if(t==="adj")  return "pts-adj";
+  if(p>=2) return "pts-2";
+  if(p>=1) return "pts-1";
+  return "pts-05";
+}
+function ptsLabel(p, t) {
+  if(t==="gate") return "4 pt GATE";
+  if(t==="grd")  return "0 / 1 / 2";
+  if(t==="adj")  return "−0.5 each";
+  return p + " pt";
+}
+function typeLabel(t) {
+  if(t==="gate") return '<span class="type-gate">🔑 Gate</span>';
+  if(t==="grd")  return '<span class="type-grd">Graded</span>';
+  if(t==="adj")  return '<span class="type-adj">Adjuster</span>';
+  return '<span class="type-bin">Binary</span>';
+}
+
+let activeDim = 0;
+let searchStr = "";
+
+function buildTable() {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  ROWS.forEach((r, i) => {
+    if(r.sep) {
+      // section header
+      const tr = document.createElement("tr");
+      tr.className = "dim-sep";
+      tr.dataset.dim = r.dim;
+      tr.innerHTML = `<td colspan="6" style="color:${DIM_COLORS[r.dim]}">
+        <span style="background:${DIM_COLORS[r.dim]};color:white;padding:2px 8px;border-radius:10px;font-size:10px;margin-right:8px">${r.sep.split("—")[0].trim()}</span>
+        ${r.sep.split("—")[1]||""}
+      </td>`;
+      tbody.appendChild(tr);
+      // formula row
+      const fr = document.createElement("tr");
+      fr.className = "formula-row";
+      fr.dataset.dim = r.dim;
+      fr.innerHTML = `<td colspan="6">
+        <div class="formula-box">${r.formula}</div>
+        ${r.cap ? `<div class="cap-note">⚠ ${r.cap}</div>` : ""}
+      </td>`;
+      tbody.appendChild(fr);
+      return;
+    }
+    const tr = document.createElement("tr");
+    tr.dataset.dim = r.dim;
+    const rowStr = typeof r.row === "number" ? r.row : r.row;
+    const fieldLower = (r.field + r.q + r.ref).toLowerCase();
+    tr.dataset.search = fieldLower;
+    tr.innerHTML = `
+      <td style="color:${DIM_COLORS[r.dim]}">${rowStr}</td>
+      <td><span class="dim-pill" style="background:${DIM_COLORS[r.dim]}">D${r.dim}</span></td>
+      <td class="field">
+        <div style="color:#555;font-size:10px;margin-bottom:2px">${r.field}</div>
+        <div style="font-weight:bold;font-size:12px">→ ${r.q}</div>
+        ${r.note ? `<div class="note">⚑ ${r.note}</div>` : ""}
+        ${r.dual ? `<div class="dual">↔ ${r.dual}</div>` : ""}
+      </td>
+      <td class="pts"><span class="pts-badge ${ptsClass(r.pts, r.type)}">${ptsLabel(r.pts, r.type)}</span></td>
+      <td class="type">${typeLabel(r.type)}</td>
+      <td class="dim-cell" style="font-size:10px;color:#999">${r.ref}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  filterTable();
+}
+
+function filterTable() {
+  searchStr = document.getElementById("search").value.toLowerCase();
+  document.querySelectorAll("#tbody tr").forEach(tr => {
+    const dim = parseInt(tr.dataset.dim || 0);
+    const search = tr.dataset.search || "";
+    const dimMatch = activeDim === 0 || dim === activeDim;
+    const searchMatch = !searchStr || search.includes(searchStr) || (tr.dataset.dim && ROWS.find(r=>r.sep&&r.dim===dim)?.sep?.toLowerCase().includes(searchStr));
+    tr.classList.toggle("hidden", !(dimMatch && (searchMatch || tr.classList.contains("dim-sep") || tr.classList.contains("formula-row"))));
+  });
+  // hide sep/formula rows if all their data rows are hidden
+  document.querySelectorAll("#tbody tr.dim-sep, #tbody tr.formula-row").forEach(tr => {
+    const dim = parseInt(tr.dataset.dim || 0);
+    if(activeDim !== 0 && dim !== activeDim) { tr.classList.add("hidden"); return; }
+    // check if any data row in this dim is visible
+    const anyVisible = Array.from(document.querySelectorAll(`#tbody tr[data-dim="${dim}"]:not(.dim-sep):not(.formula-row)`))
+      .some(r => !r.classList.contains("hidden"));
+    tr.classList.toggle("hidden", !anyVisible);
+  });
+}
+
+function filterDim(d, btn) {
+  activeDim = d;
+  document.querySelectorAll(".dim-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if(d > 0) {
+    btn.style.background = DIM_COLORS[d];
+    btn.style.color = "white";
+    btn.style.borderColor = DIM_COLORS[d];
+    // reset others
+    document.querySelectorAll(".dim-btn:not(.active)").forEach(b => {
+      b.style.background = "#f0f0f0";
+      b.style.color = "#555";
+    });
+  } else {
+    btn.style.background = "#1F4E79";
+    btn.style.color = "white";
+    document.querySelectorAll(".dim-btn:not(.active)").forEach(b => {
+      b.style.background = "#f0f0f0";
+    });
+  }
+  filterTable();
+}
+
+buildTable();
+</script>
+</body>
+</html>

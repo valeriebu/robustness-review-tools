@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Population Scope Match — Comparison Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;background:#f0f3f7;color:#222;font-size:13px;}
+.top-bar{background:#1F4E79;color:white;padding:14px 24px 0;}
+.top-bar h1{font-size:17px;margin-bottom:3px;}
+.top-bar p{font-size:11px;opacity:.75;margin-bottom:10px;}
+.tabs{display:flex;gap:4px;}
+.tab{padding:7px 18px;border:none;border-radius:6px 6px 0 0;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial;opacity:.6;}
+.tab.active{opacity:1;}
+.tab.imp{background:#E8F8F5;color:#00695C;}
+.tab.compare{background:#DEEAF1;color:#1F4E79;}
+.panel{display:none;padding:20px 24px;}
+.panel.active{display:block;}
+
+/* import */
+.imp-wrap{max-width:700px;}
+.file-slots{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.file-slot{border:1.5px dashed #aaa;border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:white;transition:all .15s;}
+.file-slot:hover,.file-slot.over{background:#E8F8F5;border-color:#00897B;}
+.file-slot.loaded{border-style:solid;border-color:#00897B;background:#f0fdf8;}
+.file-slot h3{font-size:12px;font-weight:bold;margin-bottom:6px;}
+.file-slot .icon{font-size:28px;margin-bottom:6px;}
+.file-slot .status{font-size:11px;color:#555;margin-top:4px;}
+.file-slot.loaded .status{color:#00695C;font-weight:bold;}
+.imp-btn{padding:9px 24px;background:#00897B;color:white;border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;display:block;margin-top:8px;}
+.imp-btn:disabled{opacity:.4;cursor:default;}
+
+/* tool bar */
+.tool-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tool-pill{padding:5px 14px;border-radius:20px;border:2px solid transparent;cursor:pointer;font-size:12px;font-weight:bold;font-family:Arial;}
+.tool-pill:not(.active){opacity:.4;}
+.add-btn{padding:5px 14px;background:#1F4E79;color:white;border:none;border-radius:20px;font-size:12px;font-weight:bold;cursor:pointer;}
+.del-btn{padding:4px 10px;background:#c00;color:white;border:none;border-radius:20px;font-size:11px;cursor:pointer;}
+
+/* comparison table */
+.compare-wrap{background:white;border-radius:8px;border:1px solid #dce3ec;overflow:hidden;}
+.compare-header{display:grid;grid-template-columns:180px 1fr 1fr 1fr 90px;background:#1F4E79;color:white;font-size:11px;font-weight:bold;}
+.compare-header div{padding:9px 12px;}
+.compare-header .col-int{background:#2E74B5;}
+.compare-header .col-rct{background:#375623;}
+.compare-header .col-train{background:#7B3F00;}
+.compare-header .col-match{background:#4B0082;}
+
+.section-hdr{grid-column:1/-1;background:#f0f3f7;padding:7px 12px;font-size:11px;font-weight:bold;color:#1F4E79;border-top:1px solid #dce3ec;border-bottom:1px solid #dce3ec;}
+
+.compare-row{display:grid;grid-template-columns:180px 1fr 1fr 1fr 90px;border-bottom:1px solid #f0f0f0;align-items:stretch;}
+.compare-row:last-child{border-bottom:none;}
+.compare-row:hover{background:#fafafa;}
+.compare-row .label{padding:8px 12px;font-size:11px;font-weight:bold;color:#444;background:#fafafa;border-right:1px solid #eee;}
+.compare-row .cell{padding:8px 12px;font-size:11px;color:#333;line-height:1.45;border-right:1px solid #f0f0f0;}
+.compare-row .cell:last-child{border-right:none;}
+.cell.empty{color:#bbb;font-style:italic;}
+.cell.na{color:#bbb;font-style:italic;}
+
+/* mismatch badges */
+.match-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;white-space:nowrap;}
+.m-yes{background:#E2EFDA;color:#375623;}
+.m-no{background:#FCE4D6;color:#833C00;}
+.m-partial{background:#FFF2CC;color:#7D6000;}
+.m-na{background:#f0f0f0;color:#aaa;}
+.m-unknown{background:#EAD1DC;color:#7B003F;}
+
+/* mismatch summary */
+.mismatch-summary{background:#FFF8E1;border:1px solid #FFD700;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12px;}
+.mismatch-summary h3{font-size:12px;font-weight:bold;color:#7D6000;margin-bottom:6px;}
+.mismatch-count{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;}
+.mc-item{display:flex;align-items:center;gap:5px;font-size:11px;}
+
+/* adjuster */
+.adjuster-box{background:white;border:1px solid #dce3ec;border-radius:8px;padding:14px 16px;margin-bottom:14px;}
+.adjuster-box h3{font-size:12px;font-weight:bold;color:#1F4E79;margin-bottom:8px;}
+.adj-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:6px;}
+.adj-row:last-child{margin-bottom:0;}
+.adj-label{flex:1;color:#444;}
+.adj-score{font-size:14px;font-weight:bold;color:#1F4E79;min-width:60px;text-align:right;}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <h1>Population Scope Match — Comparison Tool</h1>
+  <p>Intended use &nbsp;↔&nbsp; RCT population &nbsp;↔&nbsp; Training data &nbsp;·&nbsp; Supports D1 mismatch scoring</p>
+  <div class="tabs">
+    <button class="tab imp active" onclick="switchTab('imp')">📥 Import Files</button>
+    <button class="tab compare" onclick="switchTab('compare')">📊 Comparison</button>
+  </div>
+</div>
+
+<div id="panel-imp" class="panel active">
+  <div class="imp-wrap">
+    <h2 style="font-size:14px;font-weight:bold;color:#1F4E79;margin-bottom:8px">Import your files</h2>
+    <p style="font-size:12px;color:#555;margin-bottom:14px;line-height:1.6">
+      Upload the <strong>codebook Excel</strong> (one sheet per tool) and optionally the
+      <strong>baseline characteristics file</strong>. The tool reads intended use, RCT population,
+      and training data fields and shows them side by side.
+    </p>
+    <div class="file-slots">
+      <div class="file-slot" id="slot-codebook"
+        onclick="document.getElementById('fi-codebook').click()"
+        ondragover="event.preventDefault();this.classList.add('over')"
+        ondragleave="this.classList.remove('over')"
+        ondrop="event.preventDefault();this.classList.remove('over');loadCodebook(event.dataTransfer.files[0])">
+        <div class="icon">📋</div>
+        <h3>Codebook Excel</h3>
+        <div class="status" id="status-codebook">Click to upload · one sheet per tool</div>
+      </div>
+      <div class="file-slot" id="slot-baseline"
+        onclick="document.getElementById('fi-baseline').click()"
+        ondragover="event.preventDefault();this.classList.add('over')"
+        ondragleave="this.classList.remove('over')"
+        ondrop="event.preventDefault();this.classList.remove('over');loadBaseline(event.dataTransfer.files[0])">
+        <div class="icon">📊</div>
+        <h3>Baseline Characteristics (optional)</h3>
+        <div class="status" id="status-baseline">Click to upload · enriches RCT population column</div>
+      </div>
+    </div>
+    <input type="file" id="fi-codebook" accept=".xlsx" style="display:none" onchange="loadCodebook(this.files[0])">
+    <input type="file" id="fi-baseline" accept=".xlsx" style="display:none" onchange="loadBaseline(this.files[0])">
+    <button class="imp-btn" id="go-btn" onclick="buildComparison()" disabled>→ Build Comparison</button>
+    <p style="font-size:11px;color:#aaa;margin-top:10px;font-style:italic">
+      You can also add tools manually in the Comparison tab after importing.
+    </p>
+  </div>
+</div>
+
+<div id="panel-compare" class="panel">
+  <div id="compare-content"><p style="color:#aaa;font-style:italic;padding:20px">Import files first.</p></div>
+</div>
+
+<script>
+// ── ROW MAPS ──────────────────────────────────────────────────────────────
+// Codebook rows (0-based) for each column
+const ROWS = {
+  // Intended use (Sec 2.2)
+  int_summary:    7,
+  int_region:     15,
+  int_setting:    17,
+  int_autonomy:   18,
+  int_sex:        25,
+  int_gender:     26,
+  int_race:       29,
+  int_age:        31,
+  int_ses:        32,
+  int_education:  33,
+  int_employment: 34,
+  int_mh:         39,
+  int_physical:   43,
+  int_users:      46,
+  int_user_char:  47,
+  int_restrict:   52,
+  // RCT population (Sec 4.x)
+  rct_location:   157,
+  rct_city:       159,
+  rct_setting_type:160,
+  rct_setting:    162,
+  rct_autonomy:   163,
+  rct_device:     164,
+  rct_language:   149,
+  rct_users:      168,
+  rct_user_char:  170,
+  rct_demographics:89,
+  // Training data (Sec 6.2/6.3) — chatbots typically empty
+  train_origin:   703,
+  train_timeframe:704,
+  train_location: 706,
+  train_setting:  711,
+  train_sex:      720,
+  train_race:     728,
+  train_age:      732,
+  train_ses:      736,
+  train_mh:       748,
+  train_n:        764,
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const TOOL_COLORS = ["#1F4E79","#C00000","#375623","#7B3F00","#4B0082","#00695C","#BF360C"];
+let tools = [];        // [{name, rows, baselineData}]
+let baselineData = null; // parsed from baseline characteristics file
+let activeIdx = 0;
+
+// ── FILE LOADING ──────────────────────────────────────────────────────────
+function loadCodebook(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      tools = wb.SheetNames.map((name, i) => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:null});
+        return {name, rows, color: TOOL_COLORS[i % TOOL_COLORS.length]};
+      });
+      document.getElementById('slot-codebook').classList.add('loaded');
+      document.getElementById('status-codebook').textContent = `✓ ${tools.length} sheet(s) loaded`;
+      document.getElementById('go-btn').disabled = false;
+    } catch(e) {
+      document.getElementById('status-codebook').textContent = '❌ Error: ' + e.message;
+    }
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function loadBaseline(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      // Try "Baseline Characteristics" sheet first, else first sheet
+      const sheetName = wb.SheetNames.includes('Baseline Characteristics')
+        ? 'Baseline Characteristics' : wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+      baselineData = parseBaseline(rows);
+      document.getElementById('slot-baseline').classList.add('loaded');
+      document.getElementById('status-baseline').textContent = `✓ ${Object.keys(baselineData).length} characteristics loaded`;
+    } catch(e) {
+      document.getElementById('status-baseline').textContent = '❌ Error: ' + e.message;
+    }
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseBaseline(rows) {
+  // Parse the structured baseline characteristics table
+  // Col 0=Characteristic, Col 1=Sub-measure, Col 2=Metric type, Col 3=Group, Col 4=Value, Col 5=SD/%
+  const result = {};
+  let currentChar = null;
+  rows.forEach(row => {
+    const char = row[0] ? String(row[0]).trim() : null;
+    const metric = row[2] ? String(row[2]).trim() : null;
+    const group = row[3] ? String(row[3]).trim() : null;
+    const val = row[4];
+    const sd = row[5];
+    if (char && char !== 'Characteristic' && !char.startsWith('Baseline') && !char.startsWith('Source')) {
+      currentChar = char;
+      result[currentChar] = result[currentChar] || {reported: false, values: []};
+      if (metric === 'not reported') {
+        result[currentChar].reported = false;
+        result[currentChar].summary = 'Not reported';
+      }
+    }
+    if (currentChar && metric && metric !== 'not reported' && metric !== 'categorical') {
+      result[currentChar].reported = true;
+      if (val !== null && val !== undefined) {
+        const sub = row[1] ? String(row[1]).trim() : null;
+        const entry = {group, metric, val: String(val), sd: sd ? String(sd) : null, sub};
+        result[currentChar].values = result[currentChar].values || [];
+        result[currentChar].values.push(entry);
+      }
+    }
+  });
+  // Build summary strings
+  Object.keys(result).forEach(k => {
+    const d = result[k];
+    if (!d.summary && d.values && d.values.length) {
+      // Find overall values
+      const overall = d.values.filter(v => v.group === 'Overall' || (!v.group));
+      const control = d.values.filter(v => v.group === 'Control');
+      const interv  = d.values.filter(v => v.group === 'Intervention');
+      if (overall.length) {
+        d.summary = overall.map(v => {
+          const label = v.sub ? `${v.sub}: ` : '';
+          const sdStr = v.sd ? ` (SD ${v.sd})` : (v.metric.includes('%') ? `%` : '');
+          return `${label}${v.val}${sdStr}`;
+        }).join(', ');
+      } else if (control.length || interv.length) {
+        const rows = [];
+        if (control.length) rows.push('Control: ' + control.map(v => `${v.sub?v.sub+' ':''} ${v.val}${v.sd?' (SD '+v.sd+')':''}`).join(', '));
+        if (interv.length)  rows.push('Intervention: ' + interv.map(v => `${v.sub?v.sub+' ':''} ${v.val}${v.sd?' (SD '+v.sd+')':''}`).join(', '));
+        d.summary = rows.join(' | ');
+      }
+    }
+  });
+  return result;
+}
+
+// ── GET VALUE FROM CODEBOOK ROWS ──────────────────────────────────────────
+function getVal(rows, rowIdx) {
+  if (!rows || rowIdx >= rows.length) return null;
+  const v = rows[rowIdx][1];
+  if (v === null || v === undefined || String(v).trim() === '' || String(v).trim().toLowerCase() === 'none') return null;
+  return String(v).trim();
+}
+
+// ── BUILD COMPARISON ──────────────────────────────────────────────────────
+function buildComparison() {
+  switchTab('compare');
+  renderComparison();
+}
+
+function renderComparison() {
+  const panel = document.getElementById('compare-content');
+  if (!tools.length) {
+    panel.innerHTML = '<p style="color:#aaa;font-style:italic;padding:20px">Import files first.</p>';
+    return;
+  }
+
+  // Tool selector bar
+  let html = '<div class="tool-bar">';
+  tools.forEach((t, i) => {
+    const active = i === activeIdx;
+    html += `<div class="tool-pill ${active?'active':''}"
+      style="background:${active?t.color:'#eee'};color:${active?'white':'#555'};border-color:${t.color}"
+      onclick="activeIdx=${i};renderComparison()">${t.name}</div>`;
+  });
+  html += '</div>';
+
+  const tool = tools[activeIdx];
+  const R = tool.rows;
+  const G = v => getVal(R, v);
+
+  // Resolve RCT demographics: prefer codebook row 89, supplement with baseline file
+  const rctDemoRaw = G(ROWS.rct_demographics);
+
+  // Helper: get baseline value
+  const BL = (key) => {
+    if (!baselineData) return null;
+    const d = baselineData[key];
+    if (!d) return null;
+    if (!d.reported) return '— not reported';
+    return d.summary || null;
+  };
+
+  // ── DEFINE COMPARISON ROWS ───────────────────────────────────────────────
+  // Each: {label, section, int, rct, train, note}
+  const sections = [
+    {
+      title: 'Geographic & Setting Context',
+      rows: [
+        {label:'Region / Country',
+         int: G(ROWS.int_region),
+         rct: G(ROWS.rct_location) || (G(ROWS.rct_city) ? `${G(ROWS.rct_city)}` : null),
+         train: G(ROWS.train_location)},
+        {label:'Clinical Setting',
+         int: G(ROWS.int_setting),
+         rct: G(ROWS.rct_setting) || G(ROWS.rct_setting_type),
+         train: G(ROWS.train_setting)},
+        {label:'Language',
+         int: null,
+         rct: G(ROWS.rct_language),
+         train: null},
+      ]
+    },
+    {
+      title: 'Demographic Characteristics',
+      rows: [
+        {label:'Sex',
+         int: G(ROWS.int_sex),
+         rct: BL('Sex') || (rctDemoRaw ? 'See demographics field' : null),
+         train: G(ROWS.train_sex)},
+        {label:'Gender',
+         int: G(ROWS.int_gender),
+         rct: BL('Gender'),
+         train: null},
+        {label:'Race / Ethnicity',
+         int: G(ROWS.int_race),
+         rct: BL('Race / Ethnicity') || BL('Race/Ethnicity'),
+         train: G(ROWS.train_race)},
+        {label:'Age',
+         int: G(ROWS.int_age),
+         rct: BL('Age'),
+         train: G(ROWS.train_age)},
+        {label:'Socioeconomic Status',
+         int: G(ROWS.int_ses),
+         rct: BL('Socioeconomic Status'),
+         train: G(ROWS.train_ses)},
+        {label:'Education',
+         int: G(ROWS.int_education),
+         rct: BL('Education'),
+         train: null},
+        {label:'Employment Status',
+         int: G(ROWS.int_employment),
+         rct: BL('Employment Status'),
+         train: null},
+      ]
+    },
+    {
+      title: 'Clinical Characteristics',
+      rows: [
+        {label:'Mental Health',
+         int: G(ROWS.int_mh),
+         rct: (() => {
+           const parts = ['Depression', 'Anxiety', 'Positive Affect', 'Negative Affect']
+             .map(k => { const v = BL(`Mental Health — ${k}`); return v ? `${k}: ${v}` : null; })
+             .filter(Boolean);
+           return parts.length ? parts.join('\n') : null;
+         })(),
+         train: G(ROWS.train_mh)},
+        {label:'Physical Health',
+         int: G(ROWS.int_physical),
+         rct: BL('Physical Health'),
+         train: null},
+        {label:'Received Treatments',
+         int: null,
+         rct: BL('Received Treatments'),
+         train: null},
+      ]
+    },
+    {
+      title: 'Tool Usage Context',
+      rows: [
+        {label:'Autonomy Level',
+         int: G(ROWS.int_autonomy),
+         rct: G(ROWS.rct_autonomy),
+         train: null},
+        {label:'Device',
+         int: null,
+         rct: G(ROWS.rct_device),
+         train: null},
+        {label:'End Users',
+         int: G(ROWS.int_users),
+         rct: G(ROWS.rct_users),
+         train: null},
+        {label:'End-User Characteristics',
+         int: G(ROWS.int_user_char),
+         rct: G(ROWS.rct_user_char),
+         train: null},
+      ]
+    },
+    {
+      title: 'Training Data',
+      rows: [
+        {label:'Dataset Origin',
+         int: null,
+         rct: null,
+         train: G(ROWS.train_origin),
+         trainNote: true},
+        {label:'Timeframe',
+         int: null,
+         rct: null,
+         train: G(ROWS.train_timeframe),
+         trainNote: true},
+        {label:'Total N',
+         int: null,
+         rct: null,
+         train: G(ROWS.train_n),
+         trainNote: true},
+      ]
+    },
+  ];
+
+  // ── COUNT MISMATCHES ─────────────────────────────────────────────────────
+  function matchStatus(int_, rct_, train_) {
+    const hasRct   = rct_   && rct_   !== '— not reported';
+    const hasTrain = train_ && train_ !== '— not reported';
+    if (!hasRct && !hasTrain) return 'na';
+    if (!int_) return 'universal'; // not specified → assumed universal → no mismatch
+    return 'check'; // intended use specified — reviewer should compare
+  }
+
+  let mismatches = 0, unknowns = 0, nas = 0;
+
+  // Intended use summary
+  const intSummary = G(ROWS.int_summary);
+
+  // Build table
+  html += `
+  <div class="adjuster-box" style="margin-bottom:14px;">
+    <h3>Intended Use — Summary</h3>
+    <div style="font-size:12px;color:#444;margin-top:4px;line-height:1.5;">
+      ${intSummary || '<span style="color:#bbb;font-style:italic;">Not described in codebook</span>'}
+    </div>
+  </div>`;
+
+  html += '<div class="compare-wrap">';
+  html += `<div class="compare-header">
+    <div>Characteristic</div>
+    <div class="col-int">Intended Use (Sec 2.2)</div>
+    <div class="col-rct">RCT Population (Sec 4.x)</div>
+    <div class="col-train">Training Data (Sec 6.x)</div>
+    <div class="col-match">Match?</div>
+  </div>`;
+
+  sections.forEach(section => {
+    html += `<div class="section-hdr">${section.title}</div>`;
+    section.rows.forEach(row => {
+      const int_ = row.int;
+      const rct_ = row.rct;
+      const train_ = row.train;
+      const status = matchStatus(int_, rct_, train_);
+      let badge, badgeLabel;
+      if (status === 'na')        { badge = 'm-na';        badgeLabel = 'N/A'; }
+      else if (status === 'universal') { badge = 'm-yes';  badgeLabel = 'Universal'; }
+      else                        { badge = 'm-partial';   badgeLabel = 'Review needed'; }
+
+      const INT_UNSPEC = '<span style="color:#aaa;font-style:italic;">Not specified — assumed universal</span>';
+      const fmt = (v, col) => {
+        if (v) return `<div class="cell" style="white-space:pre-wrap;">${v}</div>`;
+        if (col === 'int') return `<div class="cell">${INT_UNSPEC}</div>`;
+        return `<div class="cell empty">— not reported</div>`;
+      };
+
+      html += `<div class="compare-row">
+        <div class="label">${row.label}</div>
+        ${fmt(int_,'int')}
+        ${fmt(rct_,'rct')}
+        ${fmt(train_,'train')}
+        <div class="cell" style="text-align:center;vertical-align:middle;padding-top:10px;">
+          <span class="match-badge ${badge}">${badgeLabel}</span>
+        </div>
+      </div>`;
+    });
+  });
+
+  html += '</div>'; // compare-wrap
+
+  // Mismatch adjuster
+  html += `
+  <div class="adjuster-box" style="margin-top:16px;">
+    <h3>D1 Mismatch Adjuster</h3>
+    <p style="font-size:11px;color:#666;margin-bottom:10px;line-height:1.5;">
+      Review the table above and count major mismatches between columns.
+      Each mismatch subtracts 0.5 from the D1 score (max penalty −2.0 = 4 mismatches).
+      A mismatch is a meaningful difference between the RCT/training population and a <em>specified</em> intended use characteristic. If intended use was not specified (assumed universal), no mismatch can be recorded for that dimension.
+    </p>
+    <div class="adj-row">
+      <span class="adj-label">Number of mismatches identified (0–4):</span>
+      <input type="number" min="0" max="4" step="1" value="0" id="mm-input"
+        style="width:60px;border:1px solid #ddd;border-radius:4px;padding:4px 8px;font-size:13px;font-family:Arial"
+        oninput="updateAdj()">
+      <span style="font-size:12px;color:#888;margin-left:6px;">× −0.5 pts from D1</span>
+    </div>
+    <div class="adj-row" style="margin-top:8px;">
+      <span class="adj-label">Penalty:</span>
+      <span class="adj-score" id="mm-penalty">−0.0 pts</span>
+    </div>
+    <div class="adj-row">
+      <span class="adj-label" style="font-size:11px;color:#888;">Record this number in the D1 mismatch adjuster field of your scoring tool.</span>
+    </div>
+  </div>`;
+
+  panel.innerHTML = html;
+}
+
+function updateAdj() {
+  const n = Math.min(4, Math.max(0, parseInt(document.getElementById('mm-input').value) || 0));
+  document.getElementById('mm-penalty').textContent = `−${(n * 0.5).toFixed(1)} pts`;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('onclick') === `switchTab('${name}')`) t.classList.add('active');
+  });
+}
+</script>
+</body>
+</html>
